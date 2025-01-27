@@ -2,6 +2,8 @@
 
 This is an interactive web application for learning Morse code using the Koch method. The trainer provides real-time audio feedback and adaptive difficulty to help you master Morse code effectively.
 
+Application is avaible [here](https://mashu.github.io/MorseTrainer/).
+
 ## What is the Koch Method?
 
 The Koch method, developed by German psychologist Ludwig Koch, is considered one of the most effective ways to learn Morse code. Instead of memorizing the visual representations of Morse code characters, the Koch method focuses on:
