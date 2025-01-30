@@ -206,16 +206,8 @@ const MorseUI = ({
                   userInput={userInput}
                   currentGroupSize={currentGroupSize}
                   currentGroup={currentGroup}
+                  onShowAnswer={onShowAnswer}
                 />
-
-                {headCopyMode && isPlaying && !showAnswer && (
-                  <InteractiveButton
-                    onClick={onShowAnswer}
-                    className="w-full py-4 rounded-xl bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-700 hover:to-yellow-600 text-lg font-medium shadow-lg"
-                  >
-                    Show Answer
-                  </InteractiveButton>
-                )}
               </div>
             </AnimatedSection>
 
