@@ -159,8 +159,8 @@ const MorseTrainer = () => {
     if (currentLevel > 1) {
       const newLevel = currentLevel - 1;
       setCurrentLevel(newLevel);
-      showNotification(`Level decreased to ${newLevel}`, 'red', 3000);
-      startNewGroup(newLevel, 3000);
+      showNotification(`Level decreased to ${newLevel}`, 'red', 1500);
+      startNewGroup(newLevel, 1000);
     } else {
       startNewGroup(currentLevel, 500);
     }
@@ -197,8 +197,8 @@ const MorseTrainer = () => {
           const newLevel = currentLevel + 1;
           setCurrentLevel(newLevel);
           setConsecutiveCorrect(0);
-          showNotification(`Level up! Now at level ${newLevel}`, 'blue', 3000);
-          startNewGroup(newLevel, 3000);
+          showNotification(`Level up! Now at level ${newLevel}`, 'blue', 1500);
+          startNewGroup(newLevel, 1000);
         } else {
           startNewGroup(currentLevel, 500);
         }
@@ -210,8 +210,8 @@ const MorseTrainer = () => {
         if (currentLevel > 1) {
           const newLevel = currentLevel - 1;
           setCurrentLevel(newLevel);
-          showNotification(`Level decreased to ${newLevel}`, 'red', 3000);
-          startNewGroup(newLevel, 3000);
+          showNotification(`Level decreased to ${newLevel}`, 'red', 1500);
+          startNewGroup(newLevel, 1000);
         } else {
           startNewGroup(currentLevel, 500);
         }
