@@ -15,7 +15,6 @@ export const CharacterGrid = ({ availableChars, onCharacterInput, currentPreset 
   }
 
   return (
-    <div className="bg-gray-800/60 backdrop-blur-sm p-4 rounded-xl border border-gray-700/50">
       <div className="flex flex-wrap gap-2 justify-center">
         {chars.map((char, index) => (
           <InteractiveButton
@@ -31,6 +30,5 @@ export const CharacterGrid = ({ availableChars, onCharacterInput, currentPreset 
           </InteractiveButton>
         ))}
       </div>
-    </div>
   );
 };

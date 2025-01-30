@@ -5,7 +5,7 @@ export const CharacterDisplay = ({
   currentGroupSize,
   currentGroup
 }) => (
-  <div className="bg-gray-800/60 backdrop-blur-sm p-6 rounded-xl border border-gray-700/50">
+  <div>
     <div className="font-mono text-4xl tracking-wider text-center p-6 bg-gradient-to-b from-gray-800 to-gray-900 rounded-xl shadow-inner">
       {headCopyMode && !showAnswer
         ? '?'
