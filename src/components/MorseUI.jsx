@@ -15,6 +15,7 @@ import { InteractiveButton } from './InteractiveButton';
 import { AudioControls } from './AudioControls';
 import { LevelProgress } from './LevelProgress';
 import { Notification } from './Notification';
+import { useRef, useEffect, useState } from 'react';
 
 const BetaBanner = () => (
   <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-yellow-500/90 via-yellow-400/90 to-yellow-500/90 text-black py-3 px-4 text-center font-bold z-50 shadow-lg backdrop-blur-sm">
@@ -26,21 +27,32 @@ const BetaBanner = () => (
   </div>
 );
 
-const MainButton = ({ isPlaying, onClick }) => (
-  <button
-    onClick={onClick}
-    className={`w-full py-8 rounded-2xl font-bold text-2xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg border border-white/5 ${
-      isPlaying
-        ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600'
-        : 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600'
-    }`}
-  >
-    <div className="flex items-center justify-center gap-3">
-      <Zap size={28} className={isPlaying ? 'animate-pulse' : ''} />
-      <span>{isPlaying ? 'Stop Practice' : 'Start Practice'}</span>
-    </div>
-  </button>
-);
+const MainButton = ({ isPlaying, onClick, onButtonRef }) => {
+  const buttonRef = useRef(null);
+
+  useEffect(() => {
+    if (buttonRef.current) {
+      onButtonRef(buttonRef.current);
+    }
+  }, [onButtonRef]);
+
+  return (
+    <button
+      ref={buttonRef}
+      onClick={onClick}
+      className={`w-full py-8 rounded-2xl font-bold text-2xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg border border-white/5 ${
+        isPlaying
+          ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600'
+          : 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600'
+      }`}
+    >
+      <div className="flex items-center justify-center gap-3">
+        <Zap size={28} className={isPlaying ? 'animate-pulse' : ''} />
+        <span>{isPlaying ? 'Stop Practice' : 'Start Practice'}</span>
+      </div>
+    </button>
+  );
+};
 
 const ModeToggle = ({ label, description, isActive, onToggle }) => (
   <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/50 p-4">
@@ -70,6 +82,49 @@ const ModeToggle = ({ label, description, isActive, onToggle }) => (
     </div>
   </div>
 );
+
+const FloatingNotification = ({ notification, buttonElement }) => {
+  const [position, setPosition] = useState({ left: 0 });
+
+  useEffect(() => {
+    if (buttonElement) {
+      const updatePosition = () => {
+        const rect = buttonElement.getBoundingClientRect();
+        setPosition({
+          left: rect.left + rect.width / 2
+        });
+      };
+
+      updatePosition();
+      window.addEventListener('resize', updatePosition);
+      window.addEventListener('scroll', updatePosition);
+
+      return () => {
+        window.removeEventListener('resize', updatePosition);
+        window.removeEventListener('scroll', updatePosition);
+      };
+    }
+  }, [buttonElement]);
+
+  if (!notification || !buttonElement) return null;
+
+  return (
+    <div
+      className="fixed z-50 transform -translate-x-1/2 -translate-y-1/2"
+      style={{
+        top: '50vh', // Center vertically in viewport
+        left: `${position.left}px`,
+      }}
+    >
+      <div className="max-w-xs sm:max-w-md w-full mx-auto px-4">
+        <Notification
+          message={notification.message}
+          color={notification.color}
+        />
+      </div>
+    </div>
+  );
+};
 
 const MorseUI = ({
   isPlaying,
@@ -109,6 +164,7 @@ const MorseUI = ({
   advanceThreshold,
   onAdvanceThresholdChange
 }) => {
+  const [mainButtonElement, setMainButtonElement] = useState(null);
   const showTrainingSettings = !hideChars;
   const showAudioSettings = !hideChars;
   const showPerformance = true;
@@ -118,12 +174,10 @@ const MorseUI = ({
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
       <BetaBanner />
 
-      {notification && (
-        <Notification
-          message={notification.message}
-          color={notification.color}
-        />
-      )}
+      <FloatingNotification
+        notification={notification}
+        buttonElement={mainButtonElement}
+      />
 
       <div className="max-w-7xl mx-auto px-4 pt-24 pb-16">
         <div className="text-center mb-12">
@@ -138,7 +192,11 @@ const MorseUI = ({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Core Training */}
           <div className="space-y-8">
-            <MainButton isPlaying={isPlaying} onClick={onTogglePlay} />
+            <MainButton
+              isPlaying={isPlaying}
+              onClick={onTogglePlay}
+              onButtonRef={setMainButtonElement}
+            />
 
             <AnimatedSection title="Practice Area" icon={Radio} defaultOpen={true}>
               <div className="space-y-6">
