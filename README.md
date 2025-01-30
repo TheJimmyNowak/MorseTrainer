@@ -56,14 +56,19 @@ K M R S U A P T L O W I . N J E F 0 Y , V G 5 / Q 9 Z H 3 8 B ? 4 2 7 C 1 D 6 X
 
 ## Installation
 
+### Pages
 Visit the live version at: [https://mashu.github.io/MorseTrainer](https://mashu.github.io/MorseTrainer)
 
-Or run locally:
+### Run locally with node:
 ```bash
 git clone https://github.com/mashu/MorseTrainer.git
 cd morse-trainer
 npm install
 npm run dev
+```
+### Using docker image
+```zsh
+docker run --rm -p 8080:80 -d ghcr.io/mashu/MorseTrainer:main
 ```
 
 ## Contributing
