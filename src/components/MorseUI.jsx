@@ -172,7 +172,7 @@ const MorseUI = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
-      <BetaBanner />
+      {/* <BetaBanner /> */}
 
       <FloatingNotification
         notification={notification}
@@ -252,6 +252,14 @@ const MorseUI = ({
               </AnimatedSection>
             )}
 
+            {showHistory && (
+              <AnimatedSection title="History" icon={HistoryIcon} defaultOpen={false}>
+                <div className="space-y-6">
+                  <History history={history} />
+                </div>
+              </AnimatedSection>
+            )}
+
             {showAudioSettings && (
               <AnimatedSection title="Audio Settings" icon={Music} defaultOpen={false}>
                 <div className="space-y-6">
@@ -294,14 +302,6 @@ const MorseUI = ({
                     consecutiveCorrect={consecutiveCorrect}
                     advanceThreshold={advanceThreshold}
                   />
-                </div>
-              </AnimatedSection>
-            )}
-
-            {showHistory && (
-              <AnimatedSection title="History" icon={HistoryIcon} defaultOpen={false}>
-                <div className="space-y-6">
-                  <History history={history} />
                 </div>
               </AnimatedSection>
             )}
