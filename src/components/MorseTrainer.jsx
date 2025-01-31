@@ -149,32 +149,32 @@ const MorseTrainer = () => {
     });
   }, []);
 
-  const handleWrongAnswer = () => {
-    setScore(prev => ({ ...prev, wrong: prev.wrong + 1 }));
-    setHistory(prev => [...prev, { group: currentGroup, userInput: newInput, correct: false }]);
-    setConsecutiveCorrect(0);
-    morseAudio.stop();
-    setIsPlaying(false);
-
-    if (currentLevel > 1) {
-      const newLevel = currentLevel - 1;
-      setCurrentLevel(newLevel);
-      showNotification(`Level decreased to ${newLevel}`, 'red', 1500);
-      startNewGroup(newLevel, 1000);
-    } else {
-      startNewGroup(currentLevel, 500);
-    }
-  };
-
   const handleCharacterInput = useCallback((char) => {
     if (!isPlaying || notification) return;
 
     const newInput = userInput + char;
     setUserInput(newInput);
 
+    const handleWrong = () => {
+      setScore(prev => ({ ...prev, wrong: prev.wrong + 1 }));
+      setHistory(prev => [...prev, { group: currentGroup, userInput: newInput, correct: false }]);
+      setConsecutiveCorrect(0);
+      morseAudio.stop();
+      setIsPlaying(false);
+
+      if (currentLevel > 1) {
+        const newLevel = currentLevel - 1;
+        setCurrentLevel(newLevel);
+        showNotification(`Level decreased to ${newLevel}`, 'red', 1500);
+        startNewGroup(newLevel, 1500);
+      } else {
+        startNewGroup(currentLevel, 500);
+      }
+    };
+
     if (currentPreset.type === 'phrase') {
       if (newInput[newInput.length - 1] !== currentGroup[newInput.length - 1]) {
-        handleWrongAnswer();
+        handleWrong();
         return;
       }
     }
@@ -203,23 +203,13 @@ const MorseTrainer = () => {
           startNewGroup(currentLevel, 500);
         }
       } else {
-        setScore(prev => ({ ...prev, wrong: prev.wrong + 1 }));
-        setHistory(prev => [...prev, { group: currentGroup, userInput: newInput, correct: false }]);
-        setConsecutiveCorrect(0);
-        if (currentLevel > 1) {
-          const newLevel = currentLevel - 1;
-          setCurrentLevel(newLevel);
-          showNotification(`Level decreased to ${newLevel}`, 'red', 1500);
-          startNewGroup(newLevel, 1000);
-        } else {
-          startNewGroup(currentLevel, 500);
-        }
+        handleWrong();
       }
     }
   }, [
     isPlaying, userInput, currentGroup, consecutiveCorrect, advanceThreshold,
     currentLevel, startNewGroup, showNotification, notification, updatePerformanceData,
-    headCopyMode, showAnswer
+    currentPreset, headCopyMode, showAnswer
   ]);
 
   const handleKeyPress = useCallback((e) => {
