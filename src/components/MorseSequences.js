@@ -48,6 +48,9 @@ export class MorseSequences {
     this.newLetterBoostDuration = 10;
     this.groupsGenerated = 0;
     this.lastAddedLevel = 1;
+    this.previousGroups = new Set(); // Track recently used groups
+    this.maxPreviousGroups = 10; // Maximum number of groups to remember
+    this.newCharacterPlayed = new Map(); // Track if new characters have been played
   }
 
   prepareSequence(preset) {
@@ -62,6 +65,8 @@ export class MorseSequences {
     this.letterWeights.clear();
     this.groupsGenerated = 0;
     this.lastAddedLevel = 1;
+    this.previousGroups.clear();
+    this.newCharacterPlayed.clear();
   }
 
   updateWeightsForLevel(newLevel) {
@@ -69,6 +74,7 @@ export class MorseSequences {
       for (let i = this.lastAddedLevel; i < newLevel; i++) {
         const newLetter = this.currentSequence[i];
         this.letterWeights.set(newLetter, 2.0);
+        this.newCharacterPlayed.set(newLetter, false);
       }
       this.lastAddedLevel = newLevel;
     }
@@ -83,19 +89,34 @@ export class MorseSequences {
     }
   }
 
-  weightedSample(chars, size) {
-    // Initialize weights for available characters only
-    const weights = new Array(chars.length).fill(1.0);
+  ensureNewCharacterIncluded(available, size, newChar) {
+    // First, select the new character
+    const result = [newChar];
 
-    // Apply stored weights for character-based sequences
-    if (this.currentPreset.type === 'character') {
-      for (let i = 0; i < chars.length; i++) {
-        const storedWeight = this.letterWeights.get(chars[i]);
-        if (storedWeight) {
-          weights[i] = storedWeight;
-        }
-      }
+    // Then randomly select remaining characters
+    const remainingChars = available.filter(c => c !== newChar);
+    while (result.length < size) {
+      const randomIndex = Math.floor(Math.random() * remainingChars.length);
+      result.push(remainingChars[randomIndex]);
     }
+
+    // Shuffle the result to randomize position of the new character
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [result[i], result[j]] = [result[j], result[i]];
+    }
+
+    return result;
+  }
+
+  weightedSample(chars, size) {
+    // Special case for when we have very few characters
+    if (chars.length <= 1) {
+      return Array(size).fill(chars[0]);
+    }
+
+    // Initialize weights for available characters
+    const weights = chars.map(char => this.letterWeights.get(char) || 1.0);
 
     // Calculate cumulative weights
     const cumWeights = [];
@@ -106,46 +127,43 @@ export class MorseSequences {
     }
 
     // Weighted random sampling
-    const selected = new Set();
-    const result = [];
+    const selected = [];
+    const used = new Set();
 
-    // For character-based sequences, ensure at least one high-weight character if present
-    if (this.currentPreset.type === 'character') {
-      const highWeightIndices = weights
-        .map((w, i) => w > 1.0 ? i : -1)
-        .filter(i => i !== -1);
-
-      if (highWeightIndices.length > 0) {
-        const idx = highWeightIndices[Math.floor(Math.random() * highWeightIndices.length)];
-        result.push(chars[idx]);
-        selected.add(idx);
-      }
-    }
-
-    // Fill remaining positions
-    while (result.length < size) {
+    while (selected.length < size) {
       const r = Math.random() * sum;
       let idx = cumWeights.findIndex(w => w > r);
 
-      // Ensure we don't exceed the available characters
+      // Handle edge case
       if (idx >= chars.length) {
         idx = chars.length - 1;
       }
 
-      // Avoid duplicates if possible
-      if (selected.has(idx)) {
-        const available = chars.filter((_, i) => !selected.has(i));
-        if (available.length > 0) {
-          const newChar = available[Math.floor(Math.random() * available.length)];
-          idx = chars.indexOf(newChar);
-        }
+      // For small character sets, allow duplicates more freely
+      if (chars.length <= 2 || !used.has(idx) || used.size === chars.length) {
+        selected.push(chars[idx]);
+        used.add(idx);
       }
-
-      result.push(chars[idx]);
-      selected.add(idx);
     }
 
-    return result;
+    return selected;
+  }
+
+  shouldAllowRepeat(available, size) {
+    // Calculate the maximum possible unique combinations
+    const maxCombinations = Math.min(
+      Math.pow(available.length, size),  // Total possible combinations with repeats
+      this.factorial(available.length) / this.factorial(available.length - size) // Combinations without repeats
+    );
+
+    // If we have fewer possible combinations than our history size,
+    // or if we have a very small character set, allow repeats
+    return maxCombinations <= this.maxPreviousGroups || available.length <= 2;
+  }
+
+  factorial(n) {
+    if (n <= 1) return 1;
+    return n * this.factorial(n - 1);
   }
 
   generateGroup(level, maxSize) {
@@ -154,7 +172,40 @@ export class MorseSequences {
     if (this.currentPreset.type === 'character') {
       this.updateWeightsForLevel(level);
       const actualSize = Math.floor(Math.random() * maxSize) + 1;
-      const selectedChars = this.weightedSample(available, actualSize);
+
+      let selectedChars;
+      const newChar = this.currentSequence[level - 1];
+
+      // Only ensure new character is included if it hasn't been played yet
+      if (this.newCharacterPlayed.has(newChar) && !this.newCharacterPlayed.get(newChar)) {
+        selectedChars = this.ensureNewCharacterIncluded(available, actualSize, newChar);
+        this.newCharacterPlayed.set(newChar, true); // Mark as played
+      } else {
+        selectedChars = this.weightedSample(available, actualSize);
+      }
+
+      const group = selectedChars.join('');
+
+      // Only check for repeats if we have enough possible combinations
+      if (!this.shouldAllowRepeat(available, actualSize) && this.previousGroups.has(group)) {
+        // Try generating a new group up to 3 times
+        for (let i = 0; i < 3; i++) {
+          const newChars = this.weightedSample(available, actualSize);
+          const newGroup = newChars.join('');
+          if (!this.previousGroups.has(newGroup)) {
+            selectedChars = newChars;
+            break;
+          }
+        }
+      }
+
+      // Update previous groups
+      const finalGroup = selectedChars.join('');
+      this.previousGroups.add(finalGroup);
+      if (this.previousGroups.size > this.maxPreviousGroups) {
+        const firstItem = this.previousGroups.values().next().value;
+        this.previousGroups.delete(firstItem);
+      }
 
       // Update state
       this.groupsGenerated++;
@@ -162,7 +213,7 @@ export class MorseSequences {
         this.decayWeights();
       }
 
-      return selectedChars.join('');
+      return finalGroup;
     } else {
       // For phrase-based sequences, return a single phrase
       return available[Math.floor(Math.random() * available.length)];
