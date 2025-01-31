@@ -17,6 +17,7 @@ class MorseAudioManager {
     this.qrmGainNode = null;
     this.currentSequence = '';
     this.currentWpm = 20;
+    this.farnsworthSpacing = 0;
 
     this.attackTime = 0.005;
     this.decayTime = 0.005;
@@ -236,19 +237,37 @@ class MorseAudioManager {
     });
   }
 
-  async playSequence(chars, wpm) {
+  async playSequence(chars, wpm, farnsworthSpacing = 0) {
     // Stop any existing playback
     this.stopAll();
 
     // Set up new playback
     this.currentSequence = chars;
     this.currentWpm = wpm;
+    this.farnsworthSpacing = farnsworthSpacing;
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
     this.isPlaying = true;
 
     try {
-      const dotLength = 1.2 / wpm;
+      // Calculate Farnsworth timings
+      // Character speed stays at target WPM
+      const characterWpm = wpm;
+
+      // Overall speed is reduced by adding extra space
+      const effectiveWpm = farnsworthSpacing > 0
+        ? Math.min(wpm, wpm * (wpm / (wpm + farnsworthSpacing)))
+        : wpm;
+
+      // Base timings at character speed
+      const dotLength = 1.2 / characterWpm;
+      const standardSpace = dotLength * 3;
+
+      // Calculate extra space needed to achieve effective WPM
+      const extraSpace = farnsworthSpacing > 0
+        ? (1.2 / effectiveWpm - 1.2 / characterWpm) * 7 // 7 units per character average
+        : 0;
+
       const morseCode = {
         'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
         'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
@@ -269,6 +288,7 @@ class MorseAudioManager {
         const amplitude = qsbProfile[i];
         const morse = morseCode[char.toUpperCase()] || '';
 
+        // Play the character's dots and dashes
         for (const symbol of morse) {
           if (!this.isPlaying || signal.aborted) return;
 
@@ -279,8 +299,8 @@ class MorseAudioManager {
               await this.playTone(dotLength * 3, signal, amplitude);
             }
 
+            // Add inter-symbol space within character
             if (!this.isPlaying || signal.aborted) return;
-
             await new Promise((resolve, reject) => {
               if (signal.aborted) {
                 reject(new Error('Aborted'));
@@ -308,6 +328,7 @@ class MorseAudioManager {
 
         if (!this.isPlaying || signal.aborted) return;
 
+        // Add inter-character space plus Farnsworth spacing
         await new Promise((resolve, reject) => {
           if (signal.aborted) {
             reject(new Error('Aborted'));
@@ -317,7 +338,7 @@ class MorseAudioManager {
           this.activeTimeout = setTimeout(() => {
             this.activeTimeout = null;
             resolve();
-          }, dotLength * 3000);
+          }, (standardSpace + extraSpace) * 1000);
 
           signal.addEventListener('abort', () => {
             if (this.activeTimeout) {
@@ -333,7 +354,7 @@ class MorseAudioManager {
         this.activeTimeout = setTimeout(() => {
           if (this.isPlaying && !signal.aborted) {
             const newQsbProfile = this.generateQsbProfile(dotLength, chars);
-            this.playSequence(chars, wpm);
+            this.playSequence(chars, wpm, farnsworthSpacing);
           }
         }, 2000);
       }

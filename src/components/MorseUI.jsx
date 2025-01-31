@@ -62,7 +62,9 @@ const MorseUI = ({
   currentPreset,
   onPresetChange,
   advanceThreshold,
-  onAdvanceThresholdChange
+  onAdvanceThresholdChange,
+  farnsworthSpacing,
+  onFarnsworthChange
 }) => {
   const [mainButtonElement, setMainButtonElement] = useState(null);
   const showTrainingSettings = !hideChars;
@@ -168,6 +170,8 @@ const MorseUI = ({
                     onFrequencyChange={onFrequencyChange}
                     wpm={wpm}
                     onWpmChange={onWpmChange}
+                    farnsworthSpacing={farnsworthSpacing}
+                    onFarnsworthChange={onFarnsworthChange}
                   />
                   <QualityControls
                     qsbAmount={qsbAmount}

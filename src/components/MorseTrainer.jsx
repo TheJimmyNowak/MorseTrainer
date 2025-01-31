@@ -47,6 +47,7 @@ const MorseTrainer = () => {
   const [qsbAmount, setQsbAmount] = useState(savedSettings.qsbAmount || 0);
   const [qrmAmount, setQrmAmount] = useState(savedSettings.qrmAmount || 0);
   const [isPaused, setIsPaused] = useState(false);
+  const [farnsworthSpacing, setFarnsworthSpacing] = useState(savedSettings.farnsworthSpacing || 0);
 
   const notificationTimeoutRef = useRef(null);
 
@@ -66,6 +67,7 @@ const MorseTrainer = () => {
       currentLevel,
       wpm,
       frequency,
+      farnsworthSpacing,
       groupSize,
       advanceThreshold,
       headCopyMode,
@@ -74,7 +76,16 @@ const MorseTrainer = () => {
       qrmAmount,
       currentPresetId: currentPreset?.id
     });
-  }, [currentLevel, wpm, frequency, groupSize, advanceThreshold, headCopyMode, hideChars, qsbAmount, qrmAmount, currentPreset]);
+  }, [currentLevel, wpm, frequency, farnsworthSpacing, groupSize, advanceThreshold, headCopyMode, hideChars, qsbAmount, qrmAmount, currentPreset]);
+
+  const handleFarnsworthChange = (delta) => {
+    const newSpacing = Math.max(0, Math.min(15, farnsworthSpacing + delta));
+    setFarnsworthSpacing(newSpacing);
+    if (isPlaying) {
+      morseAudio.stop();
+      startNewGroup(currentLevel, 500);
+    }
+  };
 
   const showNotification = useCallback((message, color = 'blue', duration = 2000) => {
     setNotification({ message, color });
@@ -96,7 +107,7 @@ const MorseTrainer = () => {
       setShowAnswer(false);
       setIsPlaying(true);
       morseAudio.start();
-      morseAudio.playSequence(newGroup, wpm);
+      morseAudio.playSequence(newGroup, wpm, farnsworthSpacing);
     };
 
     if (delay > 0) {
@@ -104,7 +115,7 @@ const MorseTrainer = () => {
     } else {
       start();
     }
-  }, [groupSize, wpm]);
+  }, [groupSize, wpm, farnsworthSpacing]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -382,6 +393,8 @@ const MorseTrainer = () => {
       onPresetChange={handlePresetChange}
       advanceThreshold={advanceThreshold}
       onAdvanceThresholdChange={handleAdvanceThresholdChange}
+      farnsworthSpacing={farnsworthSpacing}
+      onFarnsworthChange={handleFarnsworthChange}
     />
   );
 };

@@ -1,4 +1,5 @@
-// MorseSequences.js
+import { HUFFMAN_PRESET } from './HuffmanSequence';
+
 export const SEQUENCE_PRESETS = {
   KOCH: {
     id: 'koch',
@@ -6,6 +7,7 @@ export const SEQUENCE_PRESETS = {
     sequence: 'KMRSUAPTLOWI.NJEF0Y,VG5/Q9ZH38B?427C1D6X',
     type: 'character'
   },
+  HUFFMAN: HUFFMAN_PRESET,
   QCODES: {
     id: 'qcodes',
     name: 'Common Q-Codes',

@@ -6,6 +6,7 @@ export class MorseSettings {
     return {
       currentLevel: 1,
       wpm: 20,
+      farnsworthSpacing: 0, // Added Farnsworth spacing
       frequency: 600,
       groupSize: 3,
       advanceThreshold: 3,
