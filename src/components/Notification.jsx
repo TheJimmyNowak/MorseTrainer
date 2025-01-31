@@ -1,5 +1,48 @@
 import { useEffect, useState } from 'react';
 
+export const FloatingNotification = ({ notification, buttonElement }) => {
+  const [position, setPosition] = useState({ left: 0 });
+
+  useEffect(() => {
+    if (buttonElement) {
+      const updatePosition = () => {
+        const rect = buttonElement.getBoundingClientRect();
+        setPosition({
+          left: rect.left + rect.width / 2
+        });
+      };
+
+      updatePosition();
+      window.addEventListener('resize', updatePosition);
+      window.addEventListener('scroll', updatePosition);
+
+      return () => {
+        window.removeEventListener('resize', updatePosition);
+        window.removeEventListener('scroll', updatePosition);
+      };
+    }
+  }, [buttonElement]);
+
+  if (!notification || !buttonElement) return null;
+
+  return (
+    <div
+      className="fixed z-50 transform -translate-x-1/2 -translate-y-1/2"
+      style={{
+        top: '50vh',
+        left: `${position.left}px`,
+      }}
+    >
+      <div className="max-w-xs sm:max-w-md w-full mx-auto px-4">
+        <Notification
+          message={notification.message}
+          color={notification.color}
+        />
+      </div>
+    </div>
+  );
+};
+
 export const Notification = ({ message, color = 'blue', onDismiss }) => {
   const [isVisible, setIsVisible] = useState(true);
   const duration = 3000; // 3 seconds total duration

@@ -1,4 +1,4 @@
-import { Activity, History as HistoryIcon, Radio, Music, Zap, Settings } from 'lucide-react';
+import { Activity, History as HistoryIcon, Radio, Music, Settings } from 'lucide-react';
 import { AnimatedSection } from './AnimatedSection';
 import { PresetDropdown } from './PresetDropdown';
 import { ControlPanel } from './ControlPanel';
@@ -9,110 +9,12 @@ import { ScoreDisplay } from './ScoreDisplay';
 import { History } from './History';
 import { PerformanceGraph } from './PerformanceGraph';
 import { AvailableChars } from './AvailableChars';
-import { InteractiveButton } from './InteractiveButton';
 import { AudioControls } from './AudioControls';
 import { LevelProgress } from './LevelProgress';
-import { Notification } from './Notification';
-import { useRef, useEffect, useState } from 'react';
-
-const MainButton = ({ isPlaying, onClick, onButtonRef }) => {
-  const buttonRef = useRef(null);
-
-  useEffect(() => {
-    if (buttonRef.current) {
-      onButtonRef(buttonRef.current);
-    }
-  }, [onButtonRef]);
-
-  return (
-    <button
-      ref={buttonRef}
-      onClick={onClick}
-      className={`w-full py-8 rounded-2xl font-bold text-2xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg border border-white/5 ${
-        isPlaying
-          ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600'
-          : 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600'
-      }`}
-    >
-      <div className="flex items-center justify-center gap-3">
-        <Zap size={28} className={isPlaying ? 'animate-pulse' : ''} />
-        <span>{isPlaying ? 'Stop Practice' : 'Start Practice'}</span>
-      </div>
-    </button>
-  );
-};
-
-const ModeToggle = ({ label, description, isActive, onToggle }) => (
-  <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/50 p-4">
-    <div className="flex flex-col gap-3">
-      <div>
-        <div className="text-base font-semibold text-gray-200">{label}</div>
-        {description && (
-          <div className="text-sm text-gray-400 mt-1">{description}</div>
-        )}
-      </div>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onToggle}
-          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent
-            transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
-            ${isActive ? 'bg-blue-500' : 'bg-gray-600'}`}
-        >
-          <span
-            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg
-              transition duration-200 ease-in-out ${isActive ? 'translate-x-5' : 'translate-x-0'}`}
-          />
-        </button>
-        <span className="text-sm text-gray-400">
-          {isActive ? 'On' : 'Off'}
-        </span>
-      </div>
-    </div>
-  </div>
-);
-
-const FloatingNotification = ({ notification, buttonElement }) => {
-  const [position, setPosition] = useState({ left: 0 });
-
-  useEffect(() => {
-    if (buttonElement) {
-      const updatePosition = () => {
-        const rect = buttonElement.getBoundingClientRect();
-        setPosition({
-          left: rect.left + rect.width / 2
-        });
-      };
-
-      updatePosition();
-      window.addEventListener('resize', updatePosition);
-      window.addEventListener('scroll', updatePosition);
-
-      return () => {
-        window.removeEventListener('resize', updatePosition);
-        window.removeEventListener('scroll', updatePosition);
-      };
-    }
-  }, [buttonElement]);
-
-  if (!notification || !buttonElement) return null;
-
-  return (
-    <div
-      className="fixed z-50 transform -translate-x-1/2 -translate-y-1/2"
-      style={{
-        top: '50vh',
-        left: `${position.left}px`,
-      }}
-    >
-      <div className="max-w-xs sm:max-w-md w-full mx-auto px-4">
-        <Notification
-          message={notification.message}
-          color={notification.color}
-        />
-      </div>
-    </div>
-  );
-};
+import { FloatingNotification } from './Notification';
+import { MainButton } from './MainButton';
+import { ModeToggle } from './ModeToggle';
+import { useState } from 'react';
 
 const MorseUI = ({
   isPlaying,
