@@ -1,5 +1,3 @@
-'use client';
-
 import { Activity, History as HistoryIcon, Radio, Music, Zap, Settings } from 'lucide-react';
 import { AnimatedSection } from './AnimatedSection';
 import { PresetDropdown } from './PresetDropdown';
@@ -16,16 +14,6 @@ import { AudioControls } from './AudioControls';
 import { LevelProgress } from './LevelProgress';
 import { Notification } from './Notification';
 import { useRef, useEffect, useState } from 'react';
-
-const BetaBanner = () => (
-  <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-yellow-500/90 via-yellow-400/90 to-yellow-500/90 text-black py-3 px-4 text-center font-bold z-50 shadow-lg backdrop-blur-sm">
-    <div className="flex items-center justify-center gap-3">
-      <span className="animate-bounce">🚧</span>
-      <span>BETA VERSION - IN DEVELOPMENT</span>
-      <span className="animate-bounce">🚧</span>
-    </div>
-  </div>
-);
 
 const MainButton = ({ isPlaying, onClick, onButtonRef }) => {
   const buttonRef = useRef(null);
@@ -112,7 +100,7 @@ const FloatingNotification = ({ notification, buttonElement }) => {
     <div
       className="fixed z-50 transform -translate-x-1/2 -translate-y-1/2"
       style={{
-        top: '50vh', // Center vertically in viewport
+        top: '50vh',
         left: `${position.left}px`,
       }}
     >
@@ -172,8 +160,6 @@ const MorseUI = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
-      {/* <BetaBanner /> */}
-
       <FloatingNotification
         notification={notification}
         buttonElement={mainButtonElement}
@@ -208,15 +194,16 @@ const MorseUI = ({
                   currentGroup={currentGroup}
                   onShowAnswer={onShowAnswer}
                 />
-              </div>
-            </AnimatedSection>
 
-            <AnimatedSection title="Character Input" icon={Settings} defaultOpen={true}>
-              <CharacterGrid
-                availableChars={availableChars}
-                onCharacterInput={onCharacterInput}
-                currentPreset={currentPreset}
-              />
+                {/* Character Grid moved into Practice Area */}
+                <div className="mt-6 pt-6 border-t border-gray-700/50">
+                  <CharacterGrid
+                    availableChars={availableChars}
+                    onCharacterInput={onCharacterInput}
+                    currentPreset={currentPreset}
+                  />
+                </div>
+              </div>
             </AnimatedSection>
 
             <div className="grid grid-cols-2 gap-6">
