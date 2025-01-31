@@ -151,7 +151,7 @@ const MorseTrainer = () => {
 
   const handleWrongAnswer = () => {
     setScore(prev => ({ ...prev, wrong: prev.wrong + 1 }));
-    setHistory(prev => [...prev, { group: currentGroup, correct: false }]);
+    setHistory(prev => [...prev, { group: currentGroup, userInput: newInput, correct: false }]);
     setConsecutiveCorrect(0);
     morseAudio.stop();
     setIsPlaying(false);
@@ -188,7 +188,7 @@ const MorseTrainer = () => {
 
       if (isCorrect) {
         setScore(prev => ({ ...prev, correct: prev.correct + 1 }));
-        setHistory(prev => [...prev, { group: currentGroup, correct: true }]);
+        setHistory(prev => [...prev, { group: currentGroup, userInput: newInput, correct: true }]);
 
         const newConsecutiveCorrect = consecutiveCorrect + 1;
         setConsecutiveCorrect(newConsecutiveCorrect);
@@ -204,9 +204,8 @@ const MorseTrainer = () => {
         }
       } else {
         setScore(prev => ({ ...prev, wrong: prev.wrong + 1 }));
-        setHistory(prev => [...prev, { group: currentGroup, correct: false }]);
+        setHistory(prev => [...prev, { group: currentGroup, userInput: newInput, correct: false }]);
         setConsecutiveCorrect(0);
-
         if (currentLevel > 1) {
           const newLevel = currentLevel - 1;
           setCurrentLevel(newLevel);
