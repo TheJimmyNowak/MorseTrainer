@@ -14,6 +14,7 @@ import { LevelProgress } from './LevelProgress';
 import { FloatingNotification } from './Notification';
 import { MainButton } from './MainButton';
 import { ModeToggle } from './ModeToggle';
+import { SidePanel } from './SidePanel';
 import { useState } from 'react';
 
 const BetaBanner = () => (
@@ -49,8 +50,6 @@ const MorseUI = ({
   performanceData,
   headCopyMode,
   onHeadCopyMode,
-  hideChars,
-  onHideChars,
   showAnswer,
   onShowAnswer,
   currentGroup,
@@ -67,10 +66,12 @@ const MorseUI = ({
   onFarnsworthChange
 }) => {
   const [mainButtonElement, setMainButtonElement] = useState(null);
-  const showTrainingSettings = !hideChars;
-  const showAudioSettings = !hideChars;
-  const showPerformance = true;
-  const showHistory = true;
+  const [isPanelVisible, setIsPanelVisible] = useState(false);
+  const [progressiveSpeedMode, setProgressiveSpeedMode] = useState(false);
+
+  const handleProgressiveSpeedToggle = () => {
+    setProgressiveSpeedMode(!progressiveSpeedMode);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
@@ -79,6 +80,16 @@ const MorseUI = ({
         notification={notification}
         buttonElement={mainButtonElement}
       />
+
+      <button
+        onClick={() => setIsPanelVisible(!isPanelVisible)}
+        className="fixed right-4 sm:right-6 top-40 z-50 p-3 rounded-xl
+          bg-gradient-to-r from-gray-800/90 to-gray-700/90 backdrop-blur-sm
+          border border-gray-600/50 shadow-lg hover:scale-105
+          transition-all duration-300 hover:bg-gray-700"
+      >
+        <Settings size={24} />
+      </button>
 
       <div className="max-w-7xl mx-auto px-4 pt-24 pb-16">
         <div className="text-center mb-12">
@@ -110,7 +121,6 @@ const MorseUI = ({
                   onShowAnswer={onShowAnswer}
                 />
 
-                {/* Character Grid moved into Practice Area */}
                 <div className="mt-6 pt-6 border-t border-gray-700/50">
                   <CharacterGrid
                     availableChars={availableChars}
@@ -129,89 +139,86 @@ const MorseUI = ({
                 onToggle={onHeadCopyMode}
               />
               <ModeToggle
-                label="Compact Mode"
-                description="Simplify the interface"
-                isActive={hideChars}
-                onToggle={onHideChars}
+                label="Progressive Speed"
+                description="Speed increases with level"
+                isActive={progressiveSpeedMode}
+                onToggle={handleProgressiveSpeedToggle}
               />
             </div>
           </div>
 
-          {/* Right Column - Stats and Settings */}
+          {/* Right Column - Stats */}
           <div className="space-y-8">
-            {showPerformance && (
-              <AnimatedSection title="Performance" icon={Activity} defaultOpen={true}>
-                <div className="space-y-6">
-                  <ScoreDisplay score={score} />
-                  <LevelProgress
-                    consecutiveCorrect={consecutiveCorrect}
-                    advanceThreshold={advanceThreshold}
-                  />
-                  {performanceData.length > 0 && (
-                    <PerformanceGraph performanceData={performanceData} />
-                  )}
-                </div>
-              </AnimatedSection>
-            )}
+            <AnimatedSection title="History" icon={HistoryIcon} defaultOpen={true}>
+              <div className="space-y-6">
+                <History history={history} />
+              </div>
+            </AnimatedSection>
 
-            {showHistory && (
-              <AnimatedSection title="History" icon={HistoryIcon} defaultOpen={false}>
-                <div className="space-y-6">
-                  <History history={history} />
-                </div>
-              </AnimatedSection>
-            )}
-
-            {showAudioSettings && (
-              <AnimatedSection title="Audio Settings" icon={Music} defaultOpen={false}>
-                <div className="space-y-6">
-                  <AudioControls
-                    frequency={frequency}
-                    onFrequencyChange={onFrequencyChange}
-                    wpm={wpm}
-                    onWpmChange={onWpmChange}
-                    farnsworthSpacing={farnsworthSpacing}
-                    onFarnsworthChange={onFarnsworthChange}
-                  />
-                  <QualityControls
-                    qsbAmount={qsbAmount}
-                    onQsbChange={onQsbChange}
-                    qrmAmount={qrmAmount}
-                    onQrmChange={onQrmChange}
-                  />
-                </div>
-              </AnimatedSection>
-            )}
-
-            {showTrainingSettings && (
-              <AnimatedSection title="Training Settings" icon={Settings} defaultOpen={!isPlaying}>
-                <div className="space-y-6">
-                  <PresetDropdown
-                    presets={presets}
-                    currentPreset={currentPreset}
-                    onPresetChange={onPresetChange}
-                  />
-                  <ControlPanel
-                    currentLevel={currentLevel}
-                    onLevelChange={onLevelChange}
-                    groupSize={groupSize}
-                    onGroupSizeChange={onGroupSizeChange}
-                    maxLevel={maxLevel}
-                    advanceThreshold={advanceThreshold}
-                    onAdvanceThresholdChange={onAdvanceThresholdChange}
-                    consecutiveCorrect={consecutiveCorrect}
-                  />
-                  <AvailableChars
-                    availableChars={availableChars}
-                    consecutiveCorrect={consecutiveCorrect}
-                    advanceThreshold={advanceThreshold}
-                  />
-                </div>
-              </AnimatedSection>
-            )}
+            <AnimatedSection title="Performance" icon={Activity} defaultOpen={false}>
+              <div className="space-y-6">
+                <ScoreDisplay score={score} />
+                <LevelProgress
+                  consecutiveCorrect={consecutiveCorrect}
+                  advanceThreshold={advanceThreshold}
+                />
+                {performanceData.length > 0 && (
+                  <PerformanceGraph performanceData={performanceData} />
+                )}
+              </div>
+            </AnimatedSection>
           </div>
         </div>
       </div>
+
+      {/* Side Panel for Settings */}
+      <SidePanel isVisible={isPanelVisible} onVisibilityChange={setIsPanelVisible}>
+        <div className="space-y-8">
+          <AnimatedSection title="Training Settings" icon={Settings} defaultOpen={true}>
+            <div className="space-y-6">
+              <PresetDropdown
+                presets={presets}
+                currentPreset={currentPreset}
+                onPresetChange={onPresetChange}
+              />
+              <ControlPanel
+                currentLevel={currentLevel}
+                onLevelChange={onLevelChange}
+                groupSize={groupSize}
+                onGroupSizeChange={onGroupSizeChange}
+                maxLevel={maxLevel}
+                advanceThreshold={advanceThreshold}
+                onAdvanceThresholdChange={onAdvanceThresholdChange}
+                consecutiveCorrect={consecutiveCorrect}
+              />
+              <AvailableChars
+                availableChars={availableChars}
+                consecutiveCorrect={consecutiveCorrect}
+                advanceThreshold={advanceThreshold}
+              />
+            </div>
+          </AnimatedSection>
+
+          <AnimatedSection title="Audio Settings" icon={Music} defaultOpen={false}>
+            <div className="space-y-6">
+              <AudioControls
+                frequency={frequency}
+                onFrequencyChange={onFrequencyChange}
+                wpm={wpm}
+                onWpmChange={onWpmChange}
+                farnsworthSpacing={farnsworthSpacing}
+                onFarnsworthChange={onFarnsworthChange}
+              />
+              <QualityControls
+                qsbAmount={qsbAmount}
+                onQsbChange={onQsbChange}
+                qrmAmount={qrmAmount}
+                onQrmChange={onQrmChange}
+              />
+            </div>
+          </AnimatedSection>
+        </div>
+      </SidePanel>
     </div>
   );
 };
