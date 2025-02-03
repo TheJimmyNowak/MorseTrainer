@@ -9,21 +9,20 @@ export const CharacterDisplay = ({
   currentGroup,
   onShowAnswer
 }) => {
-  // Determine what to display and its color
   let displayContent;
   let textColorClass;
 
   if (headCopyMode) {
     if (showAnswer) {
       displayContent = currentGroup;
-      textColorClass = "text-yellow-400"; // Answer is shown in yellow
+      textColorClass = "text-white";
     } else {
       displayContent = '?';
-      textColorClass = "text-white"; // Question mark in white
+      textColorClass = "text-white";
     }
   } else {
     displayContent = userInput.padEnd(currentGroupSize || 1, '_');
-    textColorClass = "text-white"; // User input in white
+    textColorClass = "text-white";
   }
 
   return (
@@ -34,9 +33,12 @@ export const CharacterDisplay = ({
         <div className="absolute right-4 top-1/2 -translate-y-1/2">
           <InteractiveButton
             onClick={onShowAnswer}
-            className="p-2 rounded-lg bg-yellow-600/30 hover:bg-yellow-500/40 transition-colors"
+            className="p-2 rounded-lg bg-gray-600/30 hover:bg-gray-500/40 transition-colors group"
           >
-            <Eye size={24} className="text-yellow-500" />
+            <Eye
+              size={24}
+              className="text-white group-hover:text-yellow-400 transition-colors"
+            />
           </InteractiveButton>
         </div>
       )}
