@@ -63,15 +63,12 @@ const MorseUI = ({
   advanceThreshold,
   onAdvanceThresholdChange,
   farnsworthSpacing,
-  onFarnsworthChange
+  onFarnsworthChange,
+  progressiveSpeedMode,
+  onProgressiveSpeedToggle
 }) => {
   const [mainButtonElement, setMainButtonElement] = useState(null);
   const [isPanelVisible, setIsPanelVisible] = useState(false);
-  const [progressiveSpeedMode, setProgressiveSpeedMode] = useState(false);
-
-  const handleProgressiveSpeedToggle = () => {
-    setProgressiveSpeedMode(!progressiveSpeedMode);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
@@ -92,6 +89,7 @@ const MorseUI = ({
       </button>
 
       <div className="max-w-7xl mx-auto px-4 pt-24 pb-16">
+        {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 text-transparent bg-clip-text">
             Morse Code Trainer
@@ -175,9 +173,9 @@ const MorseUI = ({
                 />
                 <ModeToggle
                   label="Progressive Speed"
-                  description="Speed increases with level"
+                  description="Speed increases automatically with level"
                   isActive={progressiveSpeedMode}
-                  onToggle={handleProgressiveSpeedToggle}
+                  onToggle={onProgressiveSpeedToggle}
                 />
               </div>
               <ControlPanel
@@ -207,6 +205,7 @@ const MorseUI = ({
                 onWpmChange={onWpmChange}
                 farnsworthSpacing={farnsworthSpacing}
                 onFarnsworthChange={onFarnsworthChange}
+                progressiveSpeedMode={progressiveSpeedMode}
               />
               <QualityControls
                 qsbAmount={qsbAmount}

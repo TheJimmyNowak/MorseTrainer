@@ -7,7 +7,8 @@ export const AudioControls = ({
   onWpmChange,
   farnsworthSpacing = 0,
   onFarnsworthChange = () => {},
-  farnsworthStep = 1
+  farnsworthStep = 1,
+  progressiveSpeedMode = false
 }) => {
   // Calculate effective WPM based on Farnsworth spacing
   const effectiveWpm = farnsworthSpacing > 0
@@ -35,7 +36,12 @@ export const AudioControls = ({
         </div>
 
         <div className="bg-gray-700/50 p-3 rounded-lg">
-          <div className="text-xs text-gray-400 mb-2">Character Speed (WPM)</div>
+          <div className="text-xs text-gray-400 mb-2">
+            Character Speed (WPM)
+            {progressiveSpeedMode && (
+              <span className="text-yellow-400 ml-1">(Auto-adjusting)</span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <InteractiveButton
               onClick={() => onWpmChange(-1)}
