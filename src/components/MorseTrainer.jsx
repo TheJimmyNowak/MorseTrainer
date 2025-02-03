@@ -163,7 +163,6 @@ const MorseTrainer = () => {
 
       if (isPlaying) {
         morseAudio.stop();
-        setIsPlaying(false);
         showNotification(
           `Level ${newLevel}: Speed ${speedDelta > 0 ? 'increased' : 'decreased'} to ${newWpm} WPM`,
           speedDelta > 0 ? 'green' : 'yellow',
@@ -174,7 +173,6 @@ const MorseTrainer = () => {
     } else {
       if (isPlaying) {
         morseAudio.stop();
-        setIsPlaying(false);
         showNotification(`Level changed to ${newLevel}`, 'yellow', 3000);
         startNewGroup(newLevel, 3000);
       }
