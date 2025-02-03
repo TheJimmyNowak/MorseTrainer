@@ -1,29 +1,67 @@
-// CustomAlphabetManager.jsx
 import React, { useState, useEffect } from 'react';
-import { Settings2 } from 'lucide-react';
-
-const STORAGE_KEY = 'morseTrainerCustomAlphabet';
-const ALL_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,?/';
+import { Settings2, GripHorizontal } from 'lucide-react';
 
 const CustomAlphabetModal = ({ isOpen, onClose, selectedChars, onSave }) => {
-  const [localSelected, setLocalSelected] = useState(new Set(selectedChars));
+  const [availableChars, setAvailableChars] = useState(ALL_CHARS.split('').filter(char => !selectedChars.includes(char)));
+  const [orderedSelected, setOrderedSelected] = useState(selectedChars);
+  const [draggedChar, setDraggedChar] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
 
   useEffect(() => {
-    setLocalSelected(new Set(selectedChars));
+    setAvailableChars(ALL_CHARS.split('').filter(char => !selectedChars.includes(char)));
+    setOrderedSelected(selectedChars);
   }, [selectedChars]);
 
+  const handleDragStart = (e, char, index) => {
+    setDraggedChar({ char, index });
+    e.dataTransfer.effectAllowed = 'move';
+    // Add a slight delay to make the drag icon visible
+    setTimeout(() => e.target.classList.add('opacity-50'), 0);
+  };
+
+  const handleDragEnd = (e) => {
+    e.target.classList.remove('opacity-50');
+    setDraggedChar(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggedChar === null) return;
+
+    setDragOverIndex(index);
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    if (draggedChar === null) return;
+
+    const newOrdered = [...orderedSelected];
+    const { index: dragIndex } = draggedChar;
+
+    // Remove from old position and insert at new position
+    const [removed] = newOrdered.splice(dragIndex, 1);
+    newOrdered.splice(dropIndex, 0, removed);
+
+    setOrderedSelected(newOrdered);
+    setDraggedChar(null);
+    setDragOverIndex(null);
+  };
+
   const toggleChar = (char) => {
-    const newSelected = new Set(localSelected);
+    const newSelected = new Set(orderedSelected);
     if (newSelected.has(char)) {
       newSelected.delete(char);
+      setAvailableChars([...availableChars, char].sort());
     } else {
       newSelected.add(char);
+      setAvailableChars(availableChars.filter(c => c !== char));
     }
-    setLocalSelected(newSelected);
+    setOrderedSelected(Array.from(newSelected));
   };
 
   const handleSave = () => {
-    onSave(Array.from(localSelected).sort().join(''));
+    onSave(orderedSelected.join(''));
     onClose();
   };
 
@@ -32,25 +70,56 @@ const CustomAlphabetModal = ({ isOpen, onClose, selectedChars, onSave }) => {
   return (
     <>
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" onClick={onClose} />
-      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg 
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg
                     bg-gray-800 rounded-xl shadow-2xl z-50 p-6 border border-gray-700">
         <h2 className="text-xl font-semibold mb-4">Customize Alphabet</h2>
-        
-        <div className="grid grid-cols-8 gap-2 mb-6">
-          {ALL_CHARS.split('').map((char) => (
-            <button
-              key={char}
-              onClick={() => toggleChar(char)}
-              className={`w-10 h-10 rounded-lg font-mono text-lg font-semibold
-                transition-all duration-200 ${
-                localSelected.has(char)
-                  ? 'bg-blue-500 hover:bg-blue-600'
-                  : 'bg-gray-700 hover:bg-gray-600'
-              }`}
-            >
-              {char}
-            </button>
-          ))}
+
+        {/* Selected characters (draggable) */}
+        <div className="mb-6">
+          <div className="text-sm text-gray-400 mb-2">Selected Characters (drag to reorder)</div>
+          <div className="flex flex-wrap gap-2">
+            {orderedSelected.map((char, index) => (
+              <div
+                key={char}
+                draggable
+                onDragStart={(e) => handleDragStart(e, char, index)}
+                onDragEnd={handleDragEnd}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDrop={(e) => handleDrop(e, index)}
+                className={`relative flex items-center gap-2 px-3 py-2 rounded-lg
+                          bg-blue-500 hover:bg-blue-600 cursor-move
+                          transition-colors duration-200
+                          ${dragOverIndex === index ? 'border-2 border-white' : ''}`}
+              >
+                <GripHorizontal size={16} className="text-blue-200" />
+                <span className="font-mono text-lg font-semibold">{char}</span>
+                <button
+                  onClick={() => toggleChar(char)}
+                  className="ml-2 text-blue-200 hover:text-white"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Available characters */}
+        <div className="mb-6">
+          <div className="text-sm text-gray-400 mb-2">Available Characters</div>
+          <div className="flex flex-wrap gap-2">
+            {availableChars.map((char) => (
+              <button
+                key={char}
+                onClick={() => toggleChar(char)}
+                className="w-10 h-10 rounded-lg font-mono text-lg font-semibold
+                        bg-gray-700 hover:bg-gray-600
+                        transition-all duration-200"
+              >
+                {char}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex justify-end gap-3">
@@ -63,7 +132,7 @@ const CustomAlphabetModal = ({ isOpen, onClose, selectedChars, onSave }) => {
           <button
             onClick={handleSave}
             className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 transition-colors"
-            disabled={localSelected.size === 0}
+            disabled={orderedSelected.length === 0}
           >
             Save Changes
           </button>
@@ -72,6 +141,8 @@ const CustomAlphabetModal = ({ isOpen, onClose, selectedChars, onSave }) => {
     </>
   );
 };
+
+const ALL_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,?/';
 
 export const CustomAlphabetPreset = {
   id: 'custom',
@@ -106,41 +177,4 @@ export const useCustomAlphabet = () => {
   };
 };
 
-// Updated PresetDropdown.jsx
-export const EnhancedPresetDropdown = ({ 
-  presets, 
-  currentPreset, 
-  onPresetChange,
-  customSequence,
-  onCustomizeClick 
-}) => {
-  const currentIsCustom = currentPreset?.id === 'custom';
-  
-  return (
-    <div className="bg-gray-700 p-2 rounded-lg">
-      <div className="text-xs text-gray-400 mb-2">Sequence Type</div>
-      <div className="flex gap-2">
-        <select 
-          value={currentPreset?.id} 
-          onChange={(e) => onPresetChange(e.target.value)}
-          className="flex-1 p-2 bg-gray-600 rounded-lg border border-gray-500 text-white"
-        >
-          {presets.map(preset => (
-            <option key={preset.id} value={preset.id}>
-              {preset.name}
-            </option>
-          ))}
-        </select>
-        
-        {currentIsCustom && (
-          <button
-            onClick={onCustomizeClick}
-            className="px-3 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
-          >
-            <Settings2 size={20} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
+const STORAGE_KEY = 'morseTrainerCustomAlphabet';
