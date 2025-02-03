@@ -5,9 +5,18 @@ import MorseUI from './MorseUI';
 import { morseAudio } from './MorseAudio';
 import { MorseSequences } from './MorseSequences';
 import { MorseSettings } from './MorseSettings';
+import { useCustomAlphabet } from './CustomAlphabetManager';
 
 const MorseTrainer = () => {
   const morseRef = useRef(new MorseSequences());
+  const {
+    customSequence,
+    isModalOpen,
+    setIsModalOpen,
+    saveCustomSequence,
+    CustomAlphabetModal
+  } = useCustomAlphabet();
+
   const loadSettings = () => {
     const settings = MorseSettings.load();
     return {
@@ -53,17 +62,24 @@ const MorseTrainer = () => {
 
   const notificationTimeoutRef = useRef(null);
 
+  // Initialize audio and handle custom sequence
   useEffect(() => {
     morseAudio.initialize();
     setCurrentPreset(morseRef.current.getCurrentPreset());
+
+    if (customSequence) {
+      morseRef.current.updateCustomSequence(customSequence);
+    }
+
     return () => {
       morseAudio.cleanup();
       if (notificationTimeoutRef.current) {
         clearTimeout(notificationTimeoutRef.current);
       }
     };
-  }, []);
+  }, [customSequence]);
 
+  // Save settings
   useEffect(() => {
     MorseSettings.save({
       currentLevel,
@@ -334,15 +350,6 @@ const MorseTrainer = () => {
     }
   };
 
-  const handleResetKoch = () => {
-    morseRef.current.resetSequence();
-    showNotification('Koch sequence reset', 'gray', 2000);
-    if (isPlaying) {
-      morseAudio.stop();
-      startNewGroup(currentLevel, 500);
-    }
-  };
-
   const handlePresetChange = (presetId) => {
     morseRef.current.setPreset(presetId);
     setCurrentPreset(morseRef.current.getCurrentPreset());
@@ -363,12 +370,10 @@ const MorseTrainer = () => {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden && isPlaying) {
-        // Just pause the audio without resetting state
         morseAudio.stop();
         setIsPaused(true);
         showNotification('Audio paused - tab inactive', 'yellow', 2000);
       } else if (!document.hidden && isPaused && isPlaying) {
-        // Resume playback if we were paused
         setIsPaused(false);
         startNewGroup(currentLevel, 500);
         showNotification('Audio resumed', 'blue', 2000);
@@ -383,49 +388,59 @@ const MorseTrainer = () => {
   }, [isPlaying, isPaused, currentLevel, showNotification, startNewGroup]);
 
   return (
-    <MorseUI
-      isPlaying={isPlaying}
-      onTogglePlay={handleTogglePlay}
-      currentLevel={currentLevel}
-      onLevelChange={handleLevelChange}
-      groupSize={groupSize}
-      onGroupSizeChange={handleGroupSizeChange}
-      frequency={frequency}
-      onFrequencyChange={handleFrequencyChange}
-      wpm={wpm}
-      onWpmChange={handleWpmChange}
-      availableChars={morseRef.current.getAvailableChars(currentLevel)}
-      consecutiveCorrect={consecutiveCorrect}
-      userInput={userInput}
-      currentGroupSize={currentGroupSize}
-      score={score}
-      history={history}
-      maxLevel={morseRef.current.getMaxLevel()}
-      notification={notification}
-      onCharacterInput={handleCharacterInput}
-      performanceData={performanceData}
-      headCopyMode={headCopyMode}
-      onHeadCopyMode={handleHeadCopyMode}
-      hideChars={hideChars}
-      onHideChars={handleHideChars}
-      showAnswer={showAnswer}
-      onShowAnswer={handleShowAnswer}
-      currentGroup={headCopyMode && !showAnswer ? '' : currentGroup}
-      onResetKoch={handleResetKoch}
-      qsbAmount={qsbAmount}
-      onQsbChange={handleQsbChange}
-      qrmAmount={qrmAmount}
-      onQrmChange={handleQrmChange}
-      presets={morseRef.current.getPresets()}
-      currentPreset={currentPreset}
-      onPresetChange={handlePresetChange}
-      advanceThreshold={advanceThreshold}
-      onAdvanceThresholdChange={handleAdvanceThresholdChange}
-      farnsworthSpacing={farnsworthSpacing}
-      onFarnsworthChange={handleFarnsworthChange}
-      progressiveSpeedMode={progressiveSpeedMode}
-      onProgressiveSpeedToggle={handleProgressiveSpeedToggle}
-    />
+    <>
+      <MorseUI
+        isPlaying={isPlaying}
+        onTogglePlay={handleTogglePlay}
+        currentLevel={currentLevel}
+        onLevelChange={handleLevelChange}
+        groupSize={groupSize}
+        onGroupSizeChange={handleGroupSizeChange}
+        frequency={frequency}
+        onFrequencyChange={handleFrequencyChange}
+        wpm={wpm}
+        onWpmChange={handleWpmChange}
+        availableChars={morseRef.current.getAvailableChars(currentLevel)}
+        consecutiveCorrect={consecutiveCorrect}
+        userInput={userInput}
+        currentGroupSize={currentGroupSize}
+        score={score}
+        history={history}
+        maxLevel={morseRef.current.getMaxLevel()}
+        notification={notification}
+        onCharacterInput={handleCharacterInput}
+        performanceData={performanceData}
+        headCopyMode={headCopyMode}
+        onHeadCopyMode={handleHeadCopyMode}
+        hideChars={hideChars}
+        onHideChars={handleHideChars}
+        showAnswer={showAnswer}
+        onShowAnswer={handleShowAnswer}
+        currentGroup={headCopyMode && !showAnswer ? '' : currentGroup}
+        qsbAmount={qsbAmount}
+        onQsbChange={handleQsbChange}
+        qrmAmount={qrmAmount}
+        onQrmChange={handleQrmChange}
+        presets={morseRef.current.getPresets()}
+        currentPreset={currentPreset}
+        onPresetChange={handlePresetChange}
+        advanceThreshold={advanceThreshold}
+        onAdvanceThresholdChange={handleAdvanceThresholdChange}
+        farnsworthSpacing={farnsworthSpacing}
+        onFarnsworthChange={handleFarnsworthChange}
+        progressiveSpeedMode={progressiveSpeedMode}
+        onProgressiveSpeedToggle={handleProgressiveSpeedToggle}
+        onCustomizeClick={() => setIsModalOpen(true)}
+        customSequence={customSequence}
+      />
+
+      <CustomAlphabetModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        selectedChars={customSequence.split('')}
+        onSave={saveCustomSequence}
+      />
+    </>
   );
 };
 

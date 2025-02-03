@@ -1,4 +1,5 @@
 import { HUFFMAN_PRESET } from './HuffmanSequence';
+import { CustomAlphabetPreset } from './CustomAlphabetManager';
 
 export const SEQUENCE_PRESETS = {
   KOCH: {
@@ -8,6 +9,7 @@ export const SEQUENCE_PRESETS = {
     type: 'character'
   },
   HUFFMAN: HUFFMAN_PRESET,
+  CUSTOM: CustomAlphabetPreset,
   QCODES: {
     id: 'qcodes',
     name: 'Common Q-Codes',
@@ -266,5 +268,15 @@ export class MorseSequences {
   resetSequence() {
     this.currentSequence = this.prepareSequence(this.currentPreset);
     this.resetWeights();
+  }
+
+  updateCustomSequence(sequence) {
+    if (this.currentPreset.id === 'custom') {
+      this.currentPreset = {
+        ...CustomAlphabetPreset,
+        sequence
+      };
+      this.currentSequence = this.prepareSequence(this.currentPreset);
+    }
   }
 }

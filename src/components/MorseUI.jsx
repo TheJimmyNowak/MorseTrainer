@@ -65,7 +65,8 @@ const MorseUI = ({
   farnsworthSpacing,
   onFarnsworthChange,
   progressiveSpeedMode,
-  onProgressiveSpeedToggle
+  onProgressiveSpeedToggle,
+  onCustomizeClick
 }) => {
   const [mainButtonElement, setMainButtonElement] = useState(null);
   const [isPanelVisible, setIsPanelVisible] = useState(false);
@@ -163,6 +164,7 @@ const MorseUI = ({
                 presets={presets}
                 currentPreset={currentPreset}
                 onPresetChange={onPresetChange}
+                onCustomizeClick={onCustomizeClick}
               />
               <div className="grid grid-cols-1 gap-4">
                 <ModeToggle
