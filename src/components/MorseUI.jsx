@@ -130,21 +130,6 @@ const MorseUI = ({
                 </div>
               </div>
             </AnimatedSection>
-
-            <div className="grid grid-cols-2 gap-6">
-              <ModeToggle
-                label="Head Copy Mode"
-                description="Hide the text while practicing"
-                isActive={headCopyMode}
-                onToggle={onHeadCopyMode}
-              />
-              <ModeToggle
-                label="Progressive Speed"
-                description="Speed increases with level"
-                isActive={progressiveSpeedMode}
-                onToggle={handleProgressiveSpeedToggle}
-              />
-            </div>
           </div>
 
           {/* Right Column - Stats */}
@@ -181,6 +166,20 @@ const MorseUI = ({
                 currentPreset={currentPreset}
                 onPresetChange={onPresetChange}
               />
+              <div className="grid grid-cols-1 gap-4">
+                <ModeToggle
+                  label="Head Copy Mode"
+                  description="Hide the text while practicing"
+                  isActive={headCopyMode}
+                  onToggle={onHeadCopyMode}
+                />
+                <ModeToggle
+                  label="Progressive Speed"
+                  description="Speed increases with level"
+                  isActive={progressiveSpeedMode}
+                  onToggle={handleProgressiveSpeedToggle}
+                />
+              </div>
               <ControlPanel
                 currentLevel={currentLevel}
                 onLevelChange={onLevelChange}
