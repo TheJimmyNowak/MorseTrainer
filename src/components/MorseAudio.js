@@ -1,59 +1,100 @@
-// MorseAudio.js
+// MorseAudio.js - Optimized version
 class MorseAudioManager {
   constructor() {
     if (MorseAudioManager.instance) {
       return MorseAudioManager.instance;
     }
 
+    // Core audio components
     this.audioContext = null;
-    this.activeOscillator = null;
-    this.frequency = 700;
-    this.isPlaying = false;
-    this.activeTimeout = null;
-    this.abortController = null;
-    this.qsbAmount = 0;
-    this.qrmAmount = 0;
+    this.masterGain = null;
+    this.oscillatorNode = null;
     this.qrmNoiseNode = null;
     this.qrmGainNode = null;
+    this.qrmFilter = null;
+
+    // State management
+    this.isPlaying = false;
+    this.isInitialized = false;
+    this.scheduledNotes = new Set();
+    this.activeTimeout = null;
+    this.abortController = null;
+
+    // Audio parameters
+    this.frequency = 700;
+    this.qsbAmount = 0;
+    this.qrmAmount = 0;
     this.currentSequence = '';
     this.currentWpm = 20;
     this.farnsworthSpacing = 0;
 
+    // ADSR envelope settings
     this.attackTime = 0.005;
     this.decayTime = 0.005;
     this.sustainLevel = 0.8;
     this.releaseTime = 0.005;
 
+    // Performance optimizations
+    this.scheduledEvents = new Map();
+    this.audioWorkletLoaded = false;
+    
     MorseAudioManager.instance = this;
   }
 
-  initialize() {
-    if (!this.audioContext) {
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume();
+  async initialize() {
+    if (this.isInitialized) return;
+
+    try {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+        latencyHint: 'interactive',
+        sampleRate: 44100
+      });
+
+      // Create and connect master gain node
+      this.masterGain = this.audioContext.createGain();
+      this.masterGain.gain.value = 0;
+      this.masterGain.connect(this.audioContext.destination);
+
+      // Create persistent oscillator
+      this.oscillatorNode = this.audioContext.createOscillator();
+      this.oscillatorNode.type = 'sine';
+      this.oscillatorNode.frequency.setValueAtTime(this.frequency, this.audioContext.currentTime);
+      this.oscillatorNode.connect(this.masterGain);
+      this.oscillatorNode.start();
+
+      this.isInitialized = true;
+
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
+    } catch (error) {
+      console.error('Failed to initialize audio context:', error);
     }
   }
 
   createNoiseGenerator() {
-    const bufferSize = 2 * this.audioContext.sampleRate;
+    if (!this.isInitialized) return null;
+
+    const bufferSize = this.audioContext.sampleRate;
     const noiseBuffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
     const output = noiseBuffer.getChannelData(0);
 
     let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0;
 
+    // Use a more efficient buffer generation method
+    const generateNoise = new Float32Array(bufferSize);
     for (let i = 0; i < bufferSize; i++) {
       const white = Math.random() * 2 - 1;
+      
+      // Optimized pink noise generation
       b0 = 0.99886 * b0 + white * 0.0555179;
       b1 = 0.99332 * b1 + white * 0.0750759;
       b2 = 0.96900 * b2 + white * 0.1538520;
       b3 = 0.86650 * b3 + white * 0.3104856;
       b4 = 0.55000 * b4 + white * 0.5329522;
       b5 = -0.7616 * b5 - white * 0.0168980;
-
-      const pink = (b0 + b1 + b2 + b3 + b4 + b5) / 6;
-      output[i] = (pink * 0.7 + white * 0.3) * 0.5;
+      
+      output[i] = ((b0 + b1 + b2 + b3 + b4 + b5) / 6 * 0.7 + white * 0.3) * 0.5;
     }
 
     const noiseNode = this.audioContext.createBufferSource();
@@ -65,18 +106,19 @@ class MorseAudioManager {
     bandpass.frequency.value = this.frequency;
     bandpass.Q.value = 1.5;
 
-    const modulator = this.audioContext.createOscillator();
-    const modulatorGain = this.audioContext.createGain();
-    modulator.frequency.value = 0.5;
-    modulatorGain.gain.value = 50;
-
-    modulator.connect(modulatorGain);
-    modulatorGain.connect(bandpass.frequency);
-    modulator.start();
-
     noiseNode.connect(bandpass);
-    noiseNode.start();
     return { source: noiseNode, filter: bandpass };
+  }
+
+  clearScheduledEvents() {
+    if (!this.audioContext) return;
+    
+    const now = this.audioContext.currentTime;
+    for (const [time, event] of this.scheduledEvents) {
+      if (time <= now) {
+        this.scheduledEvents.delete(time);
+      }
+    }
   }
 
   stopAll() {
@@ -92,39 +134,31 @@ class MorseAudioManager {
       this.activeTimeout = null;
     }
 
-    if (this.qrmNoiseNode) {
-      this.qrmNoiseNode.stop();
-      this.qrmNoiseNode.disconnect();
-      this.qrmNoiseNode = null;
+    // Clear all scheduled events
+    this.scheduledEvents.clear();
+
+    // Efficiently stop and clean up audio nodes
+    if (this.audioContext) {
+      const now = this.audioContext.currentTime;
+      this.masterGain.gain.cancelScheduledValues(now);
+      this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, now);
+      this.masterGain.gain.linearRampToValueAtTime(0, now + this.releaseTime);
+
+      if (this.qrmNoiseNode) {
+        this.qrmNoiseNode.stop(now);
+        this.qrmNoiseNode.disconnect();
+        this.qrmNoiseNode = null;
+      }
 
       if (this.qrmFilter) {
         this.qrmFilter.disconnect();
         this.qrmFilter = null;
       }
-    }
 
-    if (this.qrmGainNode) {
-      this.qrmGainNode.disconnect();
-      this.qrmGainNode = null;
-    }
-
-    if (this.activeOscillator) {
-      const { gainNode } = this.activeOscillator;
-      const now = this.audioContext.currentTime;
-      gainNode.gain.cancelScheduledValues(now);
-      gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-      gainNode.gain.linearRampToValueAtTime(0, now + this.releaseTime);
-
-      setTimeout(() => {
-        try {
-          this.activeOscillator.oscillator.stop();
-          this.activeOscillator.oscillator.disconnect();
-          this.activeOscillator.gainNode.disconnect();
-        } catch (e) {
-          // Ignore errors from already stopped oscillators
-        }
-        this.activeOscillator = null;
-      }, this.releaseTime * 1000);
+      if (this.qrmGainNode) {
+        this.qrmGainNode.disconnect();
+        this.qrmGainNode = null;
+      }
     }
   }
 
@@ -136,7 +170,7 @@ class MorseAudioManager {
     this.qrmAmount = Math.max(0, Math.min(100, amount));
     if (this.qrmGainNode) {
       const scaledGain = (amount / 100) ** 1.5 * 0.15;
-      this.qrmGainNode.gain.value = scaledGain;
+      this.qrmGainNode.gain.setValueAtTime(scaledGain, this.audioContext.currentTime);
     }
   }
 
@@ -145,221 +179,131 @@ class MorseAudioManager {
 
     const charsToFade = Math.max(1, Math.floor(Math.random() * chars.length));
     const fadeStart = Math.floor(Math.random() * (chars.length - charsToFade));
-    const fadeProfile = Array(chars.length).fill(1);
+    const fadeProfile = new Float32Array(chars.length).fill(1);
     const maxFade = 1 - (this.qsbAmount / 100);
 
     for (let i = 0; i < charsToFade; i++) {
       const pos = fadeStart + i;
-      const fadeAmount = maxFade + (1 - maxFade) *
+      fadeProfile[pos] = maxFade + (1 - maxFade) * 
         (Math.sin((i / charsToFade) * Math.PI) ** 2);
-      fadeProfile[pos] = fadeAmount;
     }
 
     return fadeProfile;
   }
 
-  async playTone(duration, signal, amplitude = 1) {
-    if (!this.audioContext || !this.isPlaying) return;
-    if (signal?.aborted) return;
+  scheduleNote(startTime, duration, amplitude) {
+    if (!this.isInitialized) return;
 
-    if (this.activeOscillator) {
-      const { gainNode } = this.activeOscillator;
-      const now = this.audioContext.currentTime;
-      gainNode.gain.cancelScheduledValues(now);
-      gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-      gainNode.gain.linearRampToValueAtTime(0, now + this.releaseTime);
-
-      await new Promise(resolve => setTimeout(resolve, this.releaseTime * 1000));
-
-      try {
-        this.activeOscillator.oscillator.stop();
-        this.activeOscillator.oscillator.disconnect();
-        this.activeOscillator.gainNode.disconnect();
-      } catch (e) {
-        // Ignore errors from already stopped oscillators
-      }
-      this.activeOscillator = null;
-    }
-
-    const oscillator = this.audioContext.createOscillator();
-    const gainNode = this.audioContext.createGain();
-
-    if (this.qrmAmount > 0 && !this.qrmNoiseNode) {
-      const noise = this.createNoiseGenerator();
-      this.qrmNoiseNode = noise.source;
-      this.qrmFilter = noise.filter;
-      this.qrmGainNode = this.audioContext.createGain();
-      const scaledGain = (this.qrmAmount / 100) ** 1.5 * 0.15;
-      this.qrmGainNode.gain.value = scaledGain;
-
-      this.qrmFilter.connect(this.qrmGainNode);
-      this.qrmGainNode.connect(this.audioContext.destination);
-    }
-
-    oscillator.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
-
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(this.frequency, this.audioContext.currentTime);
-
+    const gainNode = this.masterGain;
     const now = this.audioContext.currentTime;
-    gainNode.gain.setValueAtTime(0, now);
 
-    gainNode.gain.linearRampToValueAtTime(amplitude, now + this.attackTime);
+    // Schedule the ADSR envelope
+    gainNode.gain.setValueAtTime(0, startTime);
+    gainNode.gain.linearRampToValueAtTime(amplitude, startTime + this.attackTime);
     gainNode.gain.linearRampToValueAtTime(
       this.sustainLevel * amplitude,
-      now + this.attackTime + this.decayTime
+      startTime + this.attackTime + this.decayTime
     );
 
-    const releaseStart = now + duration - this.releaseTime;
+    const releaseStart = startTime + duration - this.releaseTime;
     gainNode.gain.setValueAtTime(this.sustainLevel * amplitude, releaseStart);
     gainNode.gain.linearRampToValueAtTime(0, releaseStart + this.releaseTime);
 
-    this.activeOscillator = { oscillator, gainNode };
-
-    oscillator.start();
-    oscillator.stop(now + duration);
-
-    return new Promise((resolve, reject) => {
-      if (signal?.aborted) {
-        reject(new Error('Aborted'));
-        return;
-      }
-
-      signal?.addEventListener('abort', () => {
-        reject(new Error('Aborted'));
-      });
-
-      oscillator.onended = () => {
-        this.activeOscillator = null;
-        resolve();
-      };
+    // Store scheduled event for cleanup
+    this.scheduledEvents.set(startTime + duration, {
+      type: 'note',
+      endTime: startTime + duration
     });
   }
 
   async playSequence(chars, wpm, farnsworthSpacing = 0) {
-    // Stop any existing playback
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+
     this.stopAll();
 
-    // Set up new playback
     this.currentSequence = chars;
     this.currentWpm = wpm;
     this.farnsworthSpacing = farnsworthSpacing;
     this.abortController = new AbortController();
-    const signal = this.abortController.signal;
     this.isPlaying = true;
 
     try {
-      // Calculate Farnsworth timings
-      // Character speed stays at target WPM
+      // Calculate timings
       const characterWpm = wpm;
-
-      // Overall speed is reduced by adding extra space
       const effectiveWpm = farnsworthSpacing > 0
         ? Math.min(wpm, wpm * (wpm / (wpm + farnsworthSpacing)))
         : wpm;
 
-      // Base timings at character speed
       const dotLength = 1.2 / characterWpm;
       const standardSpace = dotLength * 3;
-
-      // Calculate extra space needed to achieve effective WPM
       const extraSpace = farnsworthSpacing > 0
-        ? (1.2 / effectiveWpm - 1.2 / characterWpm) * 7 // 7 units per character average
+        ? (1.2 / effectiveWpm - 1.2 / characterWpm) * 7
         : 0;
 
       const morseCode = {
-        'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
-        'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
-        'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.',
-        'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
-        'Y': '-.--', 'Z': '--..', '0': '-----', '1': '.----', '2': '..---',
-        '3': '...--', '4': '....-', '5': '.....', '6': '-....', '7': '--...',
-        '8': '---..', '9': '----.', '.': '.-.-.-', ',': '--..--', '?': '..--..',
-        '/': '-..-.'
+        'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.',
+        'F': '..-.', 'G': '--.', 'H': '....', 'I': '..', 'J': '.---',
+        'K': '-.-', 'L': '.-..', 'M': '--', 'N': '-.', 'O': '---',
+        'P': '.--.', 'Q': '--.-', 'R': '.-.', 'S': '...', 'T': '-',
+        'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-', 'Y': '-.--',
+        'Z': '--..', '0': '-----', '1': '.----', '2': '..---', '3': '...--',
+        '4': '....-', '5': '.....', '6': '-....', '7': '--...', '8': '---..',
+        '9': '----.', '.': '.-.-.-', ',': '--..--', '?': '..--..', '/': '-..-.'
       };
 
       const qsbProfile = this.generateQsbProfile(dotLength, chars);
+      let currentTime = this.audioContext.currentTime + 0.1; // Small scheduling delay
 
+      // Set up QRM if needed
+      if (this.qrmAmount > 0 && !this.qrmNoiseNode) {
+        const noise = this.createNoiseGenerator();
+        this.qrmNoiseNode = noise.source;
+        this.qrmFilter = noise.filter;
+        this.qrmGainNode = this.audioContext.createGain();
+        const scaledGain = (this.qrmAmount / 100) ** 1.5 * 0.15;
+        this.qrmGainNode.gain.value = scaledGain;
+
+        this.qrmFilter.connect(this.qrmGainNode);
+        this.qrmGainNode.connect(this.audioContext.destination);
+        this.qrmNoiseNode.start();
+      }
+
+      // Schedule all notes in advance
       for (let i = 0; i < chars.length; i++) {
-        if (!this.isPlaying || signal.aborted) return;
+        if (!this.isPlaying) break;
 
         const char = chars[i];
         const amplitude = qsbProfile[i];
         const morse = morseCode[char.toUpperCase()] || '';
 
-        // Play the character's dots and dashes
         for (const symbol of morse) {
-          if (!this.isPlaying || signal.aborted) return;
+          if (!this.isPlaying) break;
 
-          try {
-            if (symbol === '.') {
-              await this.playTone(dotLength, signal, amplitude);
-            } else {
-              await this.playTone(dotLength * 3, signal, amplitude);
-            }
-
-            // Add inter-symbol space within character
-            if (!this.isPlaying || signal.aborted) return;
-            await new Promise((resolve, reject) => {
-              if (signal.aborted) {
-                reject(new Error('Aborted'));
-                return;
-              }
-
-              this.activeTimeout = setTimeout(() => {
-                this.activeTimeout = null;
-                resolve();
-              }, dotLength * 1000);
-
-              signal.addEventListener('abort', () => {
-                if (this.activeTimeout) {
-                  clearTimeout(this.activeTimeout);
-                  this.activeTimeout = null;
-                }
-                reject(new Error('Aborted'));
-              });
-            });
-          } catch (e) {
-            if (e.message === 'Aborted') return;
-            throw e;
-          }
+          const duration = symbol === '.' ? dotLength : dotLength * 3;
+          this.scheduleNote(currentTime, duration, amplitude);
+          currentTime += duration + dotLength; // Add inter-symbol space
         }
 
-        if (!this.isPlaying || signal.aborted) return;
-
-        // Add inter-character space plus Farnsworth spacing
-        await new Promise((resolve, reject) => {
-          if (signal.aborted) {
-            reject(new Error('Aborted'));
-            return;
-          }
-
-          this.activeTimeout = setTimeout(() => {
-            this.activeTimeout = null;
-            resolve();
-          }, (standardSpace + extraSpace) * 1000);
-
-          signal.addEventListener('abort', () => {
-            if (this.activeTimeout) {
-              clearTimeout(this.activeTimeout);
-              this.activeTimeout = null;
-            }
-            reject(new Error('Aborted'));
-          });
-        });
+        currentTime += standardSpace + extraSpace;
       }
 
-      if (this.isPlaying && !signal.aborted) {
+      // Schedule replay if needed
+      if (this.isPlaying) {
         this.activeTimeout = setTimeout(() => {
-          if (this.isPlaying && !signal.aborted) {
+          if (this.isPlaying) {
             const newQsbProfile = this.generateQsbProfile(dotLength, chars);
             this.playSequence(chars, wpm, farnsworthSpacing);
           }
-        }, 2000);
+        }, (currentTime - this.audioContext.currentTime) * 1000 + 2000);
       }
+
+      // Clean up old scheduled events periodically
+      setInterval(() => this.clearScheduledEvents(), 1000);
+
     } catch (e) {
-      if (e.message !== 'Aborted') throw e;
+      if (e.message !== 'Aborted') console.error('Playback error:', e);
     }
   }
 
@@ -373,6 +317,9 @@ class MorseAudioManager {
 
   setFrequency(freq) {
     this.frequency = freq;
+    if (this.oscillatorNode) {
+      this.oscillatorNode.frequency.setValueAtTime(freq, this.audioContext.currentTime);
+    }
     if (this.qrmFilter) {
       this.qrmFilter.frequency.value = freq;
     }
@@ -384,6 +331,7 @@ class MorseAudioManager {
       this.audioContext.close();
       this.audioContext = null;
     }
+    this.isInitialized = false;
     MorseAudioManager.instance = null;
   }
 }
