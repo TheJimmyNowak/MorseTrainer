@@ -39,7 +39,7 @@ export const SEQUENCE_PRESETS = {
     sequence: [
       'DE', 'ES', 'PSE', 'TNX', 'FB', 'UR', 'RST', 'ANT', 'RIG', 'WX',
       'HR', 'HW', 'CPY', 'CQ', '73', '88', 'OM', 'YL', 'XYL', 'DX',
-      'POTA', 'SOTA', 'TU', 'GM', 'GA', 'GE', 'BK', '5NN', 'BT'
+      'POTA', 'SOTA', 'TU', 'GM', 'GA', 'GE', 'B\uFE26K', '5NN', 'B\uFE26T', 'S\uFE26K', 'A\uFE26R', 'A\uFE26S'
     ],
     type: 'phrase'
   }
@@ -173,7 +173,7 @@ export class MorseSequences {
 
   generateGroup(level, maxSize) {
     const available = this.currentSequence.slice(0, Math.min(level, this.currentSequence.length));
-
+    
     if (this.currentPreset.type === 'character') {
       this.updateWeightsForLevel(level);
       const actualSize = Math.floor(Math.random() * maxSize) + 1;

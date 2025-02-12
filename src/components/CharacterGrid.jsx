@@ -11,7 +11,7 @@ export const CharacterGrid = ({ availableChars, onCharacterInput, currentPreset 
     chars = ['1','2','3','4','5','6','7','8','9','0'];
   } else {
     chars = Array.isArray(availableChars) ? availableChars : availableChars.split('');
-    chars = [...new Set(chars.join('').replace(/\s+/g, '').split(''))].sort();
+    chars = [...new Set(chars.join('').replace(/[\s\uFE26]+/g, '').split(''))].sort();
   }
 
   return (

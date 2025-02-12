@@ -285,12 +285,13 @@ class MorseAudioManager {
     await this.ensureAudioContext();
 
     this.stopAll();
-
+    
     this.currentSequence = chars;
     this.currentWpm = wpm;
     this.farnsworthSpacing = farnsworthSpacing;
     this.abortController = new AbortController();
     this.isPlaying = true;
+    this.combined = false;
 
     // Reset master gain node for new sequence
     const now = this.audioContext.currentTime;
@@ -340,6 +341,9 @@ class MorseAudioManager {
         }
       }
 
+      //Check if chars should be played together
+      if (chars.includes('\uFE26')) this.combined = true;
+
       // Schedule all notes in advance
       for (let i = 0; i < chars.length; i++) {
         if (!this.isPlaying) break;
@@ -356,7 +360,12 @@ class MorseAudioManager {
           currentTime += duration + dotLength; // Add inter-symbol space
         }
 
-        currentTime += standardSpace + extraSpace;
+        //ommit space if chars are combined
+        if (this.combined) {
+          currentTime += extraSpace;
+        } else {
+          currentTime += standardSpace + extraSpace;
+        }
       }
 
       // Schedule replay if needed
