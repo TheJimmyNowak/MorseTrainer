@@ -38,7 +38,8 @@ export const SEQUENCE_PRESETS = {
     name: 'Common CW Words',
     sequence: [
       'DE', 'ES', 'PSE', 'TNX', 'FB', 'UR', 'RST', 'ANT', 'RIG', 'WX',
-      'HR', 'HW', 'CPY', 'CQ', '73', '88', 'OM', 'YL', 'XYL', 'DX'
+      'HR', 'HW', 'CPY', 'CQ', '73', '88', 'OM', 'YL', 'XYL', 'DX',
+      'POTA', 'SOTA', 'TU', 'GM', 'GA', 'GE', 'BK', '5NN'
     ],
     type: 'phrase'
   }
