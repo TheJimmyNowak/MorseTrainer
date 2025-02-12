@@ -39,7 +39,7 @@ export const SEQUENCE_PRESETS = {
     sequence: [
       'DE', 'ES', 'PSE', 'TNX', 'FB', 'UR', 'RST', 'ANT', 'RIG', 'WX',
       'HR', 'HW', 'CPY', 'CQ', '73', '88', 'OM', 'YL', 'XYL', 'DX',
-      'POTA', 'SOTA', 'TU', 'GM', 'GA', 'GE', 'BK', '5NN'
+      'POTA', 'SOTA', 'TU', 'GM', 'GA', 'GE', 'BK', '5NN', 'BT'
     ],
     type: 'phrase'
   }
