@@ -274,10 +274,21 @@ const MorseTrainer = () => {
     wpm, showNotification, startNewGroup, updatePerformanceData, transitionDelay
   ]);
 
+  const handleCharacterRemoved = () => {
+    const newInput = userInput.slice(0, -1);
+    setUserInput(newInput);
+  };
+
   const handleKeyPress = useCallback((e) => {
     if (!isPlaying || notification) return;
 
     const key = e.key.toUpperCase();
+    console.log(key);
+    if (key === "BACKSPACE") {
+      handleCharacterRemoved();
+      return;
+    }
+
     if (currentPreset.type === 'character') {
       const availableChars = morseRef.current.getAvailableChars(currentLevel);
       if (availableChars.includes(key)) {
@@ -289,8 +300,8 @@ const MorseTrainer = () => {
   }, [isPlaying, handleCharacterInput, notification, currentLevel, currentPreset]);
 
   useEffect(() => {
-    window.addEventListener('keypress', handleKeyPress);
-    return () => window.removeEventListener('keypress', handleKeyPress);
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
   }, [handleKeyPress]);
 
   const handleTogglePlay = () => {
