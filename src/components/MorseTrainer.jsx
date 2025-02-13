@@ -214,6 +214,11 @@ const MorseTrainer = () => {
   const handleCharacterInput = useCallback((char) => {
     if (!isPlaying || notification) return;
 
+    if (char === '\u232B') {
+      handleCharacterRemoved();
+      return;
+    }
+
     const newInput = userInput + char;
     setUserInput(newInput);
 
