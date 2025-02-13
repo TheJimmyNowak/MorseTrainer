@@ -112,8 +112,10 @@ const MorseTrainer = () => {
   const startNewGroup = useCallback((level, delay = 0) => {
     const start = () => {
       const newGroup = morseRef.current.generateGroup(level, groupSize);
-      setCurrentGroup(newGroup);
-      setCurrentGroupSize(newGroup.length);
+      const newGroupDisp = newGroup.replace('\uFE26', '');
+      console.log(newGroupDisp);
+      setCurrentGroup(newGroupDisp);
+      setCurrentGroupSize(newGroupDisp.length);
       setUserInput('');
       setShowAnswer(false);
       setIsPlaying(true);
