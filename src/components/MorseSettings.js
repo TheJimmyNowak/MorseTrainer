@@ -13,7 +13,7 @@ export class MorseSettings {
       headCopyMode: false,
       hideChars: false,
       qsbAmount: 0,
-      qrmAmount: 0,
+      qrnAmount: 0,
       levelSpacing: 1000,    // Time between repeated sequences
       transitionDelay: 500   // Time before starting new sequence after changes
     };

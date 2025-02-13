@@ -36,7 +36,7 @@ docker run --rm -p 8080:80 -d ghcr.io/mashu/MorseTrainer:main
   - Group size: 1-10 characters
   - Farnsworth spacing
   - Signal fading (QSB)
-  - Interference (QRM)
+  - Interference (QRN)
 
 - Training modes:
   - Head copy practice
