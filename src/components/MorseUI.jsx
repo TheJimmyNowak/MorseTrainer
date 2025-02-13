@@ -46,8 +46,8 @@ const MorseUI = ({
   currentGroup,
   qsbAmount,
   onQsbChange,
-  qrmAmount,
-  onQrmChange,
+  qrnAmount,
+  onQrnChange,
   presets,
   currentPreset,
   onPresetChange,
@@ -211,8 +211,8 @@ const MorseUI = ({
               <QualityControls
                 qsbAmount={qsbAmount}
                 onQsbChange={onQsbChange}
-                qrmAmount={qrmAmount}
-                onQrmChange={onQrmChange}
+                qrnAmount={qrnAmount}
+                onQrnChange={onQrnChange}
               />
             </div>
           </AnimatedSection>

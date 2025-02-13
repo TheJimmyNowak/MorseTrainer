@@ -28,7 +28,7 @@ const MorseTrainer = () => {
       headCopyMode: settings.headCopyMode,
       hideChars: settings.hideChars,
       qsbAmount: settings.qsbAmount || 0,
-      qrmAmount: settings.qrmAmount || 0,
+      qrnAmount: settings.qrnAmount || 0,
       currentPresetId: settings.currentPresetId || 'koch',
       progressiveSpeedMode: settings.progressiveSpeedMode || false,
       levelSpacing: settings.levelSpacing || 1000,
@@ -60,7 +60,7 @@ const MorseTrainer = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [notification, setNotification] = useState('');
   const [qsbAmount, setQsbAmount] = useState(savedSettings.qsbAmount || 0);
-  const [qrmAmount, setQrmAmount] = useState(savedSettings.qrmAmount || 0);
+  const [qrnAmount, setQrnAmount] = useState(savedSettings.qrnAmount || 0);
   const [isPaused, setIsPaused] = useState(false);
   const [farnsworthSpacing, setFarnsworthSpacing] = useState(savedSettings.farnsworthSpacing || 0);
 
@@ -93,14 +93,14 @@ const MorseTrainer = () => {
       headCopyMode,
       hideChars,
       qsbAmount,
-      qrmAmount,
+      qrnAmount,
       currentPresetId: currentPreset?.id,
       progressiveSpeedMode,
       levelSpacing,
       transitionDelay
     });
   }, [currentLevel, wpm, frequency, farnsworthSpacing, groupSize, advanceThreshold,
-      headCopyMode, hideChars, qsbAmount, qrmAmount, currentPreset, progressiveSpeedMode,
+      headCopyMode, hideChars, qsbAmount, qrnAmount, currentPreset, progressiveSpeedMode,
       levelSpacing, transitionDelay]);
 
   const showNotification = useCallback((message, color = 'blue', duration = 2000) => {
@@ -364,10 +364,10 @@ const MorseTrainer = () => {
     morseAudio.setQsbAmount(newAmount);
   };
 
-  const handleQrmChange = (delta) => {
-    const newAmount = Math.max(0, Math.min(100, qrmAmount + delta));
-    setQrmAmount(newAmount);
-    morseAudio.setQrmAmount(newAmount);
+  const handleQrnChange = (delta) => {
+    const newAmount = Math.max(0, Math.min(100, qrnAmount + delta));
+    setQrnAmount(newAmount);
+    morseAudio.setQrnAmount(newAmount);
   };
 
   const handleHeadCopyMode = () => {
@@ -457,8 +457,8 @@ const MorseTrainer = () => {
         currentGroup={headCopyMode && !showAnswer ? '' : currentGroup}
         qsbAmount={qsbAmount}
         onQsbChange={handleQsbChange}
-        qrmAmount={qrmAmount}
-        onQrmChange={handleQrmChange}
+        qrnAmount={qrnAmount}
+        onQrnChange={handleQrnChange}
         presets={morseRef.current.getPresets()}
         currentPreset={currentPreset}
         onPresetChange={handlePresetChange}
