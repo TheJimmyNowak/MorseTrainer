@@ -283,7 +283,6 @@ const MorseTrainer = () => {
     if (!isPlaying || notification) return;
 
     const key = e.key.toUpperCase();
-    console.log(key);
     if (key === "BACKSPACE") {
       handleCharacterRemoved();
       return;
