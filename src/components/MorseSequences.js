@@ -14,7 +14,7 @@ export const SEQUENCE_PRESETS = {
     id: 'qcodes',
     name: 'Common Q-Codes',
     sequence: [
-      'QRL', 'QRN', 'QRN', 'QRO', 'QRP', 'QRQ', 'QRS', 'QRT', 'QRU', 'QRV',
+      'QRL', 'QRM', 'QRN', 'QRO', 'QRP', 'QRQ', 'QRS', 'QRT', 'QRU', 'QRV',
       'QRX', 'QRZ', 'QSB', 'QSL', 'QSO', 'QSY', 'QTH', 'QST'
     ],
     type: 'phrase'
