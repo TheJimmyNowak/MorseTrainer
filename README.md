@@ -24,7 +24,7 @@ docker run --rm -p 8080:80 -d ghcr.io/mashu/MorseTrainer:main
 
 - Multiple training methods:
   - Koch Method (progressive character introduction)
-  - Huffman Method (frequency-based learning)
+  - Huffman Method (tree-based character ordering)
   - Q-Codes practice
   - Cut numbers training
   - Common CW words
