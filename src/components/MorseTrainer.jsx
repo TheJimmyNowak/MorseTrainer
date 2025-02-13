@@ -178,7 +178,7 @@ const MorseTrainer = () => {
     } else {
       if (isPlaying) {
         morseAudio.stop();
-        showNotification(`Level changed to ${newLevel}`, 'yellow', 3000);
+        showNotification(`Level changed to ${newLevel}`, 'yellow', transitionDelay);
         startNewGroup(newLevel, transitionDelay);
       }
     }
