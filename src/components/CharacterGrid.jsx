@@ -8,10 +8,11 @@ export const CharacterGrid = ({ availableChars, onCharacterInput, currentPreset 
   };
 
   if (currentPreset?.id === 'cut_numbers') {
-    chars = ['1','2','3','4','5','6','7','8','9','0'];
+    chars = ['1','2','3','4','5','6','7','8','9','0', '\u232B'];
   } else {
     chars = Array.isArray(availableChars) ? availableChars : availableChars.split('');
     chars = [...new Set(chars.join('').replace(/[\s\uFE26]+/g, '').split(''))].sort();
+    chars.push('\u232B');
   }
 
   return (
