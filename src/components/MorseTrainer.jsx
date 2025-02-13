@@ -30,7 +30,9 @@ const MorseTrainer = () => {
       qsbAmount: settings.qsbAmount || 0,
       qrmAmount: settings.qrmAmount || 0,
       currentPresetId: settings.currentPresetId || 'koch',
-      progressiveSpeedMode: settings.progressiveSpeedMode || false
+      progressiveSpeedMode: settings.progressiveSpeedMode || false,
+      levelSpacing: settings.levelSpacing || 1000,
+      transitionDelay: settings.transitionDelay || 500
     };
   };
 
@@ -45,6 +47,8 @@ const MorseTrainer = () => {
   const [showAnswer, setShowAnswer] = useState(false);
   const [currentPreset, setCurrentPreset] = useState(morseRef.current.getCurrentPreset());
   const [progressiveSpeedMode, setProgressiveSpeedMode] = useState(savedSettings.progressiveSpeedMode);
+  const [levelSpacing, setLevelSpacing] = useState(savedSettings.levelSpacing);
+  const [transitionDelay, setTransitionDelay] = useState(savedSettings.transitionDelay);
 
   const [currentGroupSize, setCurrentGroupSize] = useState(0);
   const [userInput, setUserInput] = useState('');
@@ -62,7 +66,6 @@ const MorseTrainer = () => {
 
   const notificationTimeoutRef = useRef(null);
 
-  // Initialize audio and handle custom sequence
   useEffect(() => {
     morseAudio.initialize();
     setCurrentPreset(morseRef.current.getCurrentPreset());
@@ -79,7 +82,6 @@ const MorseTrainer = () => {
     };
   }, [customSequence]);
 
-  // Save settings
   useEffect(() => {
     MorseSettings.save({
       currentLevel,
@@ -93,10 +95,13 @@ const MorseTrainer = () => {
       qsbAmount,
       qrmAmount,
       currentPresetId: currentPreset?.id,
-      progressiveSpeedMode
+      progressiveSpeedMode,
+      levelSpacing,
+      transitionDelay
     });
   }, [currentLevel, wpm, frequency, farnsworthSpacing, groupSize, advanceThreshold,
-      headCopyMode, hideChars, qsbAmount, qrmAmount, currentPreset, progressiveSpeedMode]);
+      headCopyMode, hideChars, qsbAmount, qrmAmount, currentPreset, progressiveSpeedMode,
+      levelSpacing, transitionDelay]);
 
   const showNotification = useCallback((message, color = 'blue', duration = 2000) => {
     setNotification({ message, color });
@@ -109,26 +114,24 @@ const MorseTrainer = () => {
     }, duration);
   }, []);
 
-  const startNewGroup = useCallback((level, delay = 0) => {
+  const startNewGroup = useCallback((level, delay = null) => {
     const start = () => {
       const newGroup = morseRef.current.generateGroup(level, groupSize);
-      const newGroupDisp = newGroup.replace('\uFE26', '');
-      console.log(newGroupDisp);
-      setCurrentGroup(newGroupDisp);
-      setCurrentGroupSize(newGroupDisp.length);
+      setCurrentGroup(newGroup);
+      setCurrentGroupSize(newGroup.length);
       setUserInput('');
       setShowAnswer(false);
       setIsPlaying(true);
       morseAudio.start();
-      morseAudio.playSequence(newGroup, wpm, farnsworthSpacing);
+      morseAudio.playSequence(newGroup, wpm, farnsworthSpacing, levelSpacing);
     };
 
-    if (delay > 0) {
+    if (delay !== null) {
       setTimeout(start, delay);
     } else {
       start();
     }
-  }, [groupSize, wpm, farnsworthSpacing]);
+  }, [groupSize, wpm, farnsworthSpacing, levelSpacing]);
 
   const updatePerformanceData = useCallback((isCorrect, level) => {
     setPerformanceData(prev => {
@@ -168,24 +171,44 @@ const MorseTrainer = () => {
         showNotification(
           `Level ${newLevel}: Speed ${speedDelta > 0 ? 'increased' : 'decreased'} to ${newWpm} WPM`,
           speedDelta > 0 ? 'green' : 'yellow',
-          3000
+          transitionDelay
         );
-        startNewGroup(newLevel, 3000);
+        startNewGroup(newLevel, transitionDelay);
       }
     } else {
       if (isPlaying) {
         morseAudio.stop();
         showNotification(`Level changed to ${newLevel}`, 'yellow', 3000);
-        startNewGroup(newLevel, 3000);
+        startNewGroup(newLevel, transitionDelay);
       }
     }
-  }, [progressiveSpeedMode, wpm, currentLevel, isPlaying, startNewGroup, showNotification]);
+  }, [progressiveSpeedMode, wpm, currentLevel, isPlaying, startNewGroup, showNotification, transitionDelay]);
 
   const handleLevelChange = (delta) => {
     const newLevel = Math.max(1, Math.min(morseRef.current.getMaxLevel(), currentLevel + delta));
     if (newLevel !== currentLevel) {
       updateLevelAndSpeed(newLevel, false);
     }
+  };
+
+  const handleLevelSpacingChange = (delta) => {
+    const step = 500;
+    const min = step;  // 500ms minimum
+    const max = 5000;  // 5000ms maximum
+    const newSpacing = Math.max(min, Math.min(max, levelSpacing + delta));
+    setLevelSpacing(newSpacing);
+    if (isPlaying) {
+      morseAudio.stop();
+      startNewGroup(currentLevel, transitionDelay);
+    }
+  };
+
+  const handleTransitionDelayChange = (delta) => {
+    const step = 100;
+    const min = 200;   // 200ms minimum
+    const max = 2000;  // 2000ms maximum
+    const newDelay = Math.max(min, Math.min(max, transitionDelay + delta));
+    setTransitionDelay(newDelay);
   };
 
   const handleCharacterInput = useCallback((char) => {
@@ -204,7 +227,7 @@ const MorseTrainer = () => {
       if (currentLevel > 1) {
         updateLevelAndSpeed(currentLevel - 1, true);
       } else {
-        startNewGroup(currentLevel, 500);
+        startNewGroup(currentLevel, transitionDelay);
       }
     };
 
@@ -234,12 +257,12 @@ const MorseTrainer = () => {
           setConsecutiveCorrect(0);
           if (progressiveSpeedMode) {
             const newWpm = wpm + 1;
-            showNotification(`Level ${currentLevel + 1}: Speed increased to ${newWpm} WPM`, 'green', 1500);
+            showNotification(`Level ${currentLevel + 1}: Speed increased to ${newWpm} WPM`, 'green', transitionDelay);
           } else {
-            showNotification(`Level up! Now at level ${currentLevel + 1}`, 'blue', 1500);
+            showNotification(`Level up! Now at level ${currentLevel + 1}`, 'blue', transitionDelay);
           }
         } else {
-          startNewGroup(currentLevel, 500);
+          startNewGroup(currentLevel, transitionDelay);
         }
       } else {
         handleWrong();
@@ -248,7 +271,7 @@ const MorseTrainer = () => {
   }, [
     isPlaying, userInput, currentGroup, consecutiveCorrect, advanceThreshold,
     currentLevel, notification, updateLevelAndSpeed, currentPreset, progressiveSpeedMode,
-    wpm, showNotification, startNewGroup, updatePerformanceData
+    wpm, showNotification, startNewGroup, updatePerformanceData, transitionDelay
   ]);
 
   const handleKeyPress = useCallback((e) => {
@@ -292,7 +315,7 @@ const MorseTrainer = () => {
     setFarnsworthSpacing(newSpacing);
     if (isPlaying) {
       morseAudio.stop();
-      startNewGroup(currentLevel, 500);
+      startNewGroup(currentLevel, transitionDelay);
     }
   };
 
@@ -301,7 +324,7 @@ const MorseTrainer = () => {
     setGroupSize(newSize);
     if (isPlaying) {
       morseAudio.stop();
-      startNewGroup(currentLevel, 500);
+      startNewGroup(currentLevel, transitionDelay);
     }
   };
 
@@ -316,7 +339,7 @@ const MorseTrainer = () => {
     setWpm(newWpm);
     if (isPlaying) {
       morseAudio.stop();
-      startNewGroup(currentLevel, 500);
+      startNewGroup(currentLevel, transitionDelay);
     }
   };
 
@@ -336,7 +359,7 @@ const MorseTrainer = () => {
     setHeadCopyMode(!headCopyMode);
     if (isPlaying) {
       morseAudio.stop();
-      startNewGroup(currentLevel, 500);
+      startNewGroup(currentLevel, transitionDelay);
     }
   };
 
@@ -355,10 +378,10 @@ const MorseTrainer = () => {
     setCurrentPreset(morseRef.current.getCurrentPreset());
     setCurrentLevel(1);
     setConsecutiveCorrect(0);
-    showNotification(`Switched to ${morseRef.current.getCurrentPreset().name}`, 'blue', 2000);
+    showNotification(`Switched to ${morseRef.current.getCurrentPreset().name}`, 'blue', transitionDelay);
     if (isPlaying) {
       morseAudio.stop();
-      startNewGroup(1, 500);
+      startNewGroup(1, transitionDelay);
     }
   };
 
@@ -372,11 +395,11 @@ const MorseTrainer = () => {
       if (document.hidden && isPlaying) {
         morseAudio.stop();
         setIsPaused(true);
-        showNotification('Audio paused - tab inactive', 'yellow', 2000);
+        showNotification('Audio paused - tab inactive', 'yellow', transitionDelay);
       } else if (!document.hidden && isPaused && isPlaying) {
         setIsPaused(false);
-        startNewGroup(currentLevel, 500);
-        showNotification('Audio resumed', 'blue', 2000);
+        startNewGroup(currentLevel, transitionDelay);
+        showNotification('Audio resumed', 'blue', transitionDelay);
       }
     };
 
@@ -385,7 +408,7 @@ const MorseTrainer = () => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isPlaying, isPaused, currentLevel, showNotification, startNewGroup]);
+  }, [isPlaying, isPaused, currentLevel, showNotification, startNewGroup, transitionDelay]);
 
   return (
     <>
@@ -432,6 +455,10 @@ const MorseTrainer = () => {
         onProgressiveSpeedToggle={handleProgressiveSpeedToggle}
         onCustomizeClick={() => setIsModalOpen(true)}
         customSequence={customSequence}
+        levelSpacing={levelSpacing}
+        onLevelSpacingChange={handleLevelSpacingChange}
+        transitionDelay={transitionDelay}
+        onTransitionDelayChange={handleTransitionDelayChange}
       />
 
       <CustomAlphabetModal

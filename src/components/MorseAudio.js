@@ -276,7 +276,7 @@ class MorseAudioManager {
     });
   }
 
-  async playSequence(chars, wpm, farnsworthSpacing = 0) {
+  async playSequence(chars, wpm, farnsworthSpacing = 0, levelSpacing = 2000) {
     if (!this.isInitialized) {
       await this.initialize();
     }
@@ -285,7 +285,7 @@ class MorseAudioManager {
     await this.ensureAudioContext();
 
     this.stopAll();
-    
+
     this.currentSequence = chars;
     this.currentWpm = wpm;
     this.farnsworthSpacing = farnsworthSpacing;
@@ -374,7 +374,7 @@ class MorseAudioManager {
           if (this.isPlaying) {
             this.playSequence(chars, wpm, farnsworthSpacing);
           }
-        }, (currentTime - this.audioContext.currentTime) * 1000 + 2000);
+        }, (currentTime - this.audioContext.currentTime) * 1000 + levelSpacing);
       }
 
       // Clean up old scheduled events periodically

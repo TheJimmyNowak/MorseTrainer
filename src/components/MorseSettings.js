@@ -6,14 +6,16 @@ export class MorseSettings {
     return {
       currentLevel: 1,
       wpm: 20,
-      farnsworthSpacing: 0, // Added Farnsworth spacing
+      farnsworthSpacing: 0,
       frequency: 600,
       groupSize: 3,
       advanceThreshold: 3,
       headCopyMode: false,
       hideChars: false,
       qsbAmount: 0,
-      qrmAmount: 0
+      qrmAmount: 0,
+      levelSpacing: 1000,    // Time between repeated sequences
+      transitionDelay: 500   // Time before starting new sequence after changes
     };
   }
 

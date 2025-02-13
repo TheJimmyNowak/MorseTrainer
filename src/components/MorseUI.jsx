@@ -57,7 +57,11 @@ const MorseUI = ({
   onFarnsworthChange,
   progressiveSpeedMode,
   onProgressiveSpeedToggle,
-  onCustomizeClick
+  onCustomizeClick,
+  levelSpacing,
+  onLevelSpacingChange,
+  transitionDelay,
+  onTransitionDelayChange,
 }) => {
   const [mainButtonElement, setMainButtonElement] = useState(null);
   const [isPanelVisible, setIsPanelVisible] = useState(false);
@@ -199,6 +203,10 @@ const MorseUI = ({
                 farnsworthSpacing={farnsworthSpacing}
                 onFarnsworthChange={onFarnsworthChange}
                 progressiveSpeedMode={progressiveSpeedMode}
+                levelSpacing={levelSpacing}
+                onLevelSpacingChange={onLevelSpacingChange}
+                transitionDelay={transitionDelay}
+                onTransitionDelayChange={onTransitionDelayChange}
               />
               <QualityControls
                 qsbAmount={qsbAmount}
