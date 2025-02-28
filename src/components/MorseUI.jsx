@@ -2,8 +2,8 @@ import { Activity, History as HistoryIcon, Radio, Music, Settings } from 'lucide
 import { AnimatedSection } from './AnimatedSection';
 import { PresetDropdown } from './PresetDropdown';
 import { ControlPanel } from './ControlPanel';
-import { QualityControls } from './QualityControls';
-import { RadioNoiseControls } from './RadioNoiseControls'; // Import the new RadioNoiseControls
+import { InteractiveButton } from './InteractiveButton'; // Import InteractiveButton
+import { FilterNoiseControls } from './RadioNoiseControls'; // Import the FilterNoiseControls component
 import { CharacterDisplay } from './CharacterDisplay';
 import { CharacterGrid } from './CharacterGrid';
 import { ScoreDisplay } from './ScoreDisplay';
@@ -47,8 +47,6 @@ const MorseUI = ({
   currentGroup,
   qsbAmount,
   onQsbChange,
-  qrnAmount,
-  onQrnChange,
   presets,
   currentPreset,
   onPresetChange,
@@ -63,7 +61,7 @@ const MorseUI = ({
   onLevelSpacingChange,
   transitionDelay,
   onTransitionDelayChange,
-  // Radio noise props
+  // Filter noise props
   radioNoiseEnabled,
   onRadioNoiseToggle,
   radioNoiseVolume,
@@ -224,9 +222,9 @@ const MorseUI = ({
                 transitionDelay={transitionDelay}
                 onTransitionDelayChange={onTransitionDelayChange}
               />
-              
-              {/* Radio Noise Controls (replacing QRN) */}
-              <RadioNoiseControls
+
+              {/* Filter Noise Controls (replacing QRN) */}
+              <FilterNoiseControls
                 isEnabled={radioNoiseEnabled}
                 onToggle={onRadioNoiseToggle}
                 volume={radioNoiseVolume}
@@ -242,14 +240,32 @@ const MorseUI = ({
                 crackleIntensity={radioNoiseCrackle}
                 onCrackleIntensityChange={onRadioNoiseCrackleChange}
               />
-              
-              {/* Keep QSB for compatibility or historical purposes */}
-              <QualityControls
-                qsbAmount={qsbAmount}
-                onQsbChange={onQsbChange}
-                qrnAmount={qrnAmount}
-                onQrnChange={onQrnChange}
-              />
+
+              {/* Keep QSB controls as they simulate a different effect (signal fading) */}
+              <div className="bg-gray-700/50 p-3 rounded-lg">
+                <div className="text-sm mb-2">Signal Fading (QSB)</div>
+                <div className="flex items-center gap-2">
+                  <InteractiveButton
+                    onClick={() => onQsbChange(-10)}
+                    className="w-10 h-10 rounded bg-gray-600"
+                    disabled={qsbAmount <= 0}
+                  >-</InteractiveButton>
+                  <div className="flex-1">
+                    <div className="w-full bg-gray-600 rounded-full h-2">
+                      <div
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-200"
+                        style={{ width: `${qsbAmount}%` }}
+                      />
+                    </div>
+                    <div className="text-center mt-1">{qsbAmount}%</div>
+                  </div>
+                  <InteractiveButton
+                    onClick={() => onQsbChange(10)}
+                    className="w-10 h-10 rounded bg-gray-600"
+                    disabled={qsbAmount >= 100}
+                  >+</InteractiveButton>
+                </div>
+              </div>
             </div>
           </AnimatedSection>
         </div>

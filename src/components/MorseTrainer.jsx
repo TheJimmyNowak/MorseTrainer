@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MorseUI from './MorseUI';
 import { morseAudio } from './MorseAudio';
-import { radioNoise } from './RadioNoiseGenerator'; // Import the radio noise generator
+import { filterNoise } from './FilterNoiseGenerator'; // Import the filter noise generator
 import { MorseSequences } from './MorseSequences';
 import { MorseSettings } from './MorseSettings';
 import { useCustomAlphabet } from './CustomAlphabetManager';
@@ -29,14 +29,13 @@ const MorseTrainer = () => {
       headCopyMode: settings.headCopyMode,
       hideChars: settings.hideChars,
       qsbAmount: settings.qsbAmount || 0,
-      qrnAmount: settings.qrnAmount || 0,
       currentPresetId: settings.currentPresetId || 'koch',
       progressiveSpeedMode: settings.progressiveSpeedMode || false,
       levelSpacing: settings.levelSpacing || 1000,
       transitionDelay: settings.transitionDelay || 500,
-      // New radio noise settings
+      // Filter noise settings
       radioNoiseEnabled: settings.radioNoiseEnabled || false,
-      radioNoiseVolume: settings.radioNoiseVolume || 0.2,
+      radioNoiseVolume: settings.radioNoiseVolume || 0.5,
       radioNoiseResonance: settings.radioNoiseResonance || 25,
       radioNoiseWarmth: settings.radioNoiseWarmth || 8,
       radioNoiseDrift: settings.radioNoiseDrift || 0.5,
@@ -59,7 +58,7 @@ const MorseTrainer = () => {
   const [levelSpacing, setLevelSpacing] = useState(savedSettings.levelSpacing);
   const [transitionDelay, setTransitionDelay] = useState(savedSettings.transitionDelay);
 
-  // Radio noise state
+  // Filter noise state
   const [radioNoiseEnabled, setRadioNoiseEnabled] = useState(savedSettings.radioNoiseEnabled);
   const [radioNoiseVolume, setRadioNoiseVolume] = useState(savedSettings.radioNoiseVolume);
   const [radioNoiseResonance, setRadioNoiseResonance] = useState(savedSettings.radioNoiseResonance);
@@ -67,6 +66,9 @@ const MorseTrainer = () => {
   const [radioNoiseDrift, setRadioNoiseDrift] = useState(savedSettings.radioNoiseDrift);
   const [radioNoiseAtmospheric, setRadioNoiseAtmospheric] = useState(savedSettings.radioNoiseAtmospheric);
   const [radioNoiseCrackle, setRadioNoiseCrackle] = useState(savedSettings.radioNoiseCrackle);
+
+  // Keep QSB
+  const [qsbAmount, setQsbAmount] = useState(savedSettings.qsbAmount || 0);
 
   const [currentGroupSize, setCurrentGroupSize] = useState(0);
   const [userInput, setUserInput] = useState('');
@@ -77,8 +79,6 @@ const MorseTrainer = () => {
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [notification, setNotification] = useState('');
-  const [qsbAmount, setQsbAmount] = useState(savedSettings.qsbAmount || 0);
-  const [qrnAmount, setQrnAmount] = useState(savedSettings.qrnAmount || 0);
   const [isPaused, setIsPaused] = useState(false);
   const [farnsworthSpacing, setFarnsworthSpacing] = useState(savedSettings.farnsworthSpacing || 0);
 
@@ -94,7 +94,7 @@ const MorseTrainer = () => {
 
     return () => {
       morseAudio.cleanup();
-      radioNoise.cleanup(); // Clean up radio noise when component unmounts
+      filterNoise.cleanup(); // Clean up filter noise when component unmounts
       if (notificationTimeoutRef.current) {
         clearTimeout(notificationTimeoutRef.current);
       }
@@ -102,18 +102,18 @@ const MorseTrainer = () => {
   }, [customSequence]);
 
   useEffect(() => {
-    // Update the radio noise frequency to match the Morse tone
+    // Update the filter noise frequency to match the Morse tone
     if (radioNoiseEnabled) {
-      radioNoise.syncFrequency(frequency);
+      filterNoise.syncFrequency(frequency);
     }
   }, [frequency, radioNoiseEnabled]);
 
   useEffect(() => {
-    // Start or stop the radio noise based on the enabled state
+    // Start or stop the filter noise based on the enabled state
     if (radioNoiseEnabled && isPlaying) {
-      radioNoise.start();
+      filterNoise.start();
     } else {
-      radioNoise.stop();
+      filterNoise.stop();
     }
   }, [radioNoiseEnabled, isPlaying]);
 
@@ -129,12 +129,11 @@ const MorseTrainer = () => {
       headCopyMode,
       hideChars,
       qsbAmount,
-      qrnAmount,
       currentPresetId: currentPreset?.id,
       progressiveSpeedMode,
       levelSpacing,
       transitionDelay,
-      // Radio noise settings
+      // Include filter noise settings
       radioNoiseEnabled,
       radioNoiseVolume,
       radioNoiseResonance,
@@ -145,9 +144,9 @@ const MorseTrainer = () => {
     });
   }, [
     currentLevel, wpm, frequency, farnsworthSpacing, groupSize, advanceThreshold,
-    headCopyMode, hideChars, qsbAmount, qrnAmount, currentPreset, progressiveSpeedMode,
+    headCopyMode, hideChars, qsbAmount, currentPreset, progressiveSpeedMode,
     levelSpacing, transitionDelay,
-    // Include radio noise settings
+    // Include filter noise settings
     radioNoiseEnabled, radioNoiseVolume, radioNoiseResonance, radioNoiseWarmth,
     radioNoiseDrift, radioNoiseAtmospheric, radioNoiseCrackle
   ]);
@@ -173,10 +172,10 @@ const MorseTrainer = () => {
       setIsPlaying(true);
       morseAudio.start();
       morseAudio.playSequence(newGroup, wpm, farnsworthSpacing, levelSpacing);
-      
-      // Start radio noise if enabled
+
+      // Start filter noise if enabled
       if (radioNoiseEnabled) {
-        radioNoise.start();
+        filterNoise.start();
       }
     };
 
@@ -222,7 +221,7 @@ const MorseTrainer = () => {
 
       if (isPlaying) {
         morseAudio.stop();
-        if (radioNoiseEnabled) radioNoise.stop();
+        if (radioNoiseEnabled) filterNoise.stop();
         showNotification(
           `Level ${newLevel}: Speed ${speedDelta > 0 ? 'increased' : 'decreased'} to ${newWpm} WPM`,
           speedDelta > 0 ? 'green' : 'yellow',
@@ -233,7 +232,7 @@ const MorseTrainer = () => {
     } else {
       if (isPlaying) {
         morseAudio.stop();
-        if (radioNoiseEnabled) radioNoise.stop();
+        if (radioNoiseEnabled) filterNoise.stop();
         showNotification(`Level changed to ${newLevel}`, 'yellow', transitionDelay);
         startNewGroup(newLevel, transitionDelay);
       }
@@ -255,7 +254,7 @@ const MorseTrainer = () => {
     setLevelSpacing(newSpacing);
     if (isPlaying) {
       morseAudio.stop();
-      if (radioNoiseEnabled) radioNoise.stop();
+      if (radioNoiseEnabled) filterNoise.stop();
       startNewGroup(currentLevel, transitionDelay);
     }
   };
@@ -284,7 +283,7 @@ const MorseTrainer = () => {
       setHistory(prev => [...prev, { group: currentGroup, userInput: newInput, correct: false }]);
       setConsecutiveCorrect(0);
       morseAudio.stop();
-      if (radioNoiseEnabled) radioNoise.stop();
+      if (radioNoiseEnabled) filterNoise.stop();
       setIsPlaying(false);
 
       if (currentLevel > 1) {
@@ -303,7 +302,7 @@ const MorseTrainer = () => {
 
     if (newInput.length === currentGroup.length) {
       morseAudio.stop();
-      if (radioNoiseEnabled) radioNoise.stop();
+      if (radioNoiseEnabled) filterNoise.stop();
       setIsPlaying(false);
 
       const isCorrect = newInput === currentGroup;
@@ -370,7 +369,7 @@ const MorseTrainer = () => {
   const handleTogglePlay = () => {
     if (isPlaying) {
       morseAudio.stop();
-      if (radioNoiseEnabled) radioNoise.stop();
+      if (radioNoiseEnabled) filterNoise.stop();
       setIsPlaying(false);
       setCurrentGroup('');
       setUserInput('');
@@ -390,7 +389,7 @@ const MorseTrainer = () => {
     setFarnsworthSpacing(newSpacing);
     if (isPlaying) {
       morseAudio.stop();
-      if (radioNoiseEnabled) radioNoise.stop();
+      if (radioNoiseEnabled) filterNoise.stop();
       startNewGroup(currentLevel, transitionDelay);
     }
   };
@@ -400,7 +399,7 @@ const MorseTrainer = () => {
     setGroupSize(newSize);
     if (isPlaying) {
       morseAudio.stop();
-      if (radioNoiseEnabled) radioNoise.stop();
+      if (radioNoiseEnabled) filterNoise.stop();
       startNewGroup(currentLevel, transitionDelay);
     }
   };
@@ -410,7 +409,7 @@ const MorseTrainer = () => {
     setFrequency(newFreq);
     morseAudio.setFrequency(newFreq);
     if (radioNoiseEnabled) {
-      radioNoise.syncFrequency(newFreq);
+      filterNoise.syncFrequency(newFreq);
     }
   };
 
@@ -419,77 +418,71 @@ const MorseTrainer = () => {
     setWpm(newWpm);
     if (isPlaying) {
       morseAudio.stop();
-      if (radioNoiseEnabled) radioNoise.stop();
+      if (radioNoiseEnabled) filterNoise.stop();
       startNewGroup(currentLevel, transitionDelay);
     }
   };
 
-  // Radio noise controls
+  // Filter noise controls
   const handleRadioNoiseToggle = () => {
     const newState = !radioNoiseEnabled;
     setRadioNoiseEnabled(newState);
     if (newState && isPlaying) {
-      radioNoise.syncFrequency(frequency);
-      radioNoise.start();
+      filterNoise.syncFrequency(frequency);
+      filterNoise.start();
     } else {
-      radioNoise.stop();
+      filterNoise.stop();
     }
   };
 
   const handleRadioNoiseVolumeChange = (delta) => {
-    const newVolume = Math.max(0, Math.min(0.5, radioNoiseVolume + delta));
+    const newVolume = Math.max(0, Math.min(1.5, radioNoiseVolume + delta));
     setRadioNoiseVolume(newVolume);
-    radioNoise.setVolume(newVolume);
+    filterNoise.setVolume(newVolume);
   };
 
   const handleRadioNoiseResonanceChange = (delta) => {
     const newValue = Math.max(5, Math.min(50, radioNoiseResonance + delta));
     setRadioNoiseResonance(newValue);
-    radioNoise.updateParameter('filterResonance', newValue);
+    filterNoise.updateParameter('filterResonance', newValue);
   };
 
   const handleRadioNoiseWarmthChange = (delta) => {
     const newValue = Math.max(0, Math.min(15, radioNoiseWarmth + delta));
     setRadioNoiseWarmth(newValue);
-    radioNoise.updateParameter('warmth', newValue);
+    filterNoise.updateParameter('warmth', newValue);
   };
 
   const handleRadioNoiseDriftChange = (delta) => {
     const newValue = Math.max(0, Math.min(2, radioNoiseDrift + delta));
     setRadioNoiseDrift(newValue);
-    radioNoise.updateParameter('driftSpeed', newValue);
+    filterNoise.updateParameter('driftSpeed', newValue);
   };
 
   const handleRadioNoiseAtmosphericChange = (delta) => {
-    const newValue = Math.max(0, Math.min(2, radioNoiseAtmospheric + delta));
+    const newValue = Math.max(0, Math.min(3, radioNoiseAtmospheric + delta));
     setRadioNoiseAtmospheric(newValue);
-    radioNoise.updateParameter('atmosphericIntensity', newValue);
+    filterNoise.updateParameter('atmosphericIntensity', newValue);
   };
 
   const handleRadioNoiseCrackleChange = (delta) => {
     const newValue = Math.max(0, Math.min(0.3, radioNoiseCrackle + delta));
     setRadioNoiseCrackle(newValue);
-    radioNoise.updateParameter('crackleIntensity', newValue);
+    filterNoise.updateParameter('crackleIntensity', newValue);
   };
 
-  // QSB and QRN controls (keeping for backward compatibility)
+  // QSB control
   const handleQsbChange = (delta) => {
     const newAmount = Math.max(0, Math.min(100, qsbAmount + delta));
     setQsbAmount(newAmount);
     morseAudio.setQsbAmount(newAmount);
   };
 
-  const handleQrnChange = (delta) => {
-    const newAmount = Math.max(0, Math.min(100, qrnAmount + delta));
-    setQrnAmount(newAmount);
-    morseAudio.setQrnAmount(newAmount);
-  };
-
   const handleHeadCopyMode = () => {
     setHeadCopyMode(!headCopyMode);
     if (isPlaying) {
       morseAudio.stop();
-      if (radioNoiseEnabled) radioNoise.stop();
+      if (radioNoiseEnabled) filterNoise.stop();
       startNewGroup(currentLevel, transitionDelay);
     }
   };
@@ -512,7 +505,7 @@ const MorseTrainer = () => {
     showNotification(`Switched to ${morseRef.current.getCurrentPreset().name}`, 'blue', transitionDelay);
     if (isPlaying) {
       morseAudio.stop();
-      if (radioNoiseEnabled) radioNoise.stop();
+      if (radioNoiseEnabled) filterNoise.stop();
       startNewGroup(1, transitionDelay);
     }
   };
@@ -526,7 +519,7 @@ const MorseTrainer = () => {
     const handleVisibilityChange = () => {
       if (document.hidden && isPlaying) {
         morseAudio.stop();
-        if (radioNoiseEnabled) radioNoise.stop();
+        if (radioNoiseEnabled) filterNoise.stop();
         setIsPaused(true);
         showNotification('Audio paused - tab inactive', 'yellow', transitionDelay);
       } else if (!document.hidden && isPaused && isPlaying) {
@@ -575,8 +568,6 @@ const MorseTrainer = () => {
         currentGroup={headCopyMode && !showAnswer ? '' : currentGroup}
         qsbAmount={qsbAmount}
         onQsbChange={handleQsbChange}
-        qrnAmount={qrnAmount}
-        onQrnChange={handleQrnChange}
         presets={morseRef.current.getPresets()}
         currentPreset={currentPreset}
         onPresetChange={handlePresetChange}
@@ -592,7 +583,7 @@ const MorseTrainer = () => {
         onLevelSpacingChange={handleLevelSpacingChange}
         transitionDelay={transitionDelay}
         onTransitionDelayChange={handleTransitionDelayChange}
-        // Radio noise parameters
+        // Filter noise parameters
         radioNoiseEnabled={radioNoiseEnabled}
         onRadioNoiseToggle={handleRadioNoiseToggle}
         radioNoiseVolume={radioNoiseVolume}

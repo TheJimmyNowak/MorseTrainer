@@ -1,6 +1,6 @@
 import { InteractiveButton } from './InteractiveButton';
 
-export const RadioNoiseControls = ({
+export const FilterNoiseControls = ({
   isEnabled,
   onToggle,
   volume,
@@ -38,7 +38,7 @@ export const RadioNoiseControls = ({
             <div className="text-sm mb-2">Noise Volume</div>
             <div className="flex items-center gap-2">
               <InteractiveButton
-                onClick={() => onVolumeChange(-0.05)}
+                onClick={() => onVolumeChange(-0.1)}
                 className="w-10 h-10 rounded bg-gray-600"
                 disabled={volume <= 0}
               >-</InteractiveButton>
@@ -46,15 +46,15 @@ export const RadioNoiseControls = ({
                 <div className="w-full bg-gray-600 rounded-full h-2">
                   <div
                     className="bg-blue-500 h-2 rounded-full transition-all duration-200"
-                    style={{ width: `${volume * 100}%` }}
+                    style={{ width: `${(volume / 1.5) * 100}%` }}
                   />
                 </div>
                 <div className="text-center mt-1">{Math.round(volume * 100)}%</div>
               </div>
               <InteractiveButton
-                onClick={() => onVolumeChange(0.05)}
+                onClick={() => onVolumeChange(0.1)}
                 className="w-10 h-10 rounded bg-gray-600"
-                disabled={volume >= 0.5}
+                disabled={volume >= 1.5}
               >+</InteractiveButton>
             </div>
           </div>
@@ -108,7 +108,7 @@ export const RadioNoiseControls = ({
               >+</InteractiveButton>
             </div>
           </div>
-
+          
           <div className="bg-gray-700/50 p-3 rounded-lg">
             <div className="text-sm mb-2">Frequency Drift</div>
             <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export const RadioNoiseControls = ({
                 <div className="w-full bg-gray-600 rounded-full h-2">
                   <div
                     className="bg-blue-400 h-2 rounded-full transition-all duration-200"
-                    style={{ width: `${(atmosphericNoise / 2) * 100}%` }}
+                    style={{ width: `${(atmosphericNoise / 3) * 100}%` }}
                   />
                 </div>
                 <div className="text-center mt-1">{atmosphericNoise.toFixed(1)}</div>
@@ -154,7 +154,7 @@ export const RadioNoiseControls = ({
               <InteractiveButton
                 onClick={() => onAtmosphericNoiseChange(0.1)}
                 className="w-10 h-10 rounded bg-gray-600"
-                disabled={atmosphericNoise >= 2}
+                disabled={atmosphericNoise >= 3}
               >+</InteractiveButton>
             </div>
           </div>

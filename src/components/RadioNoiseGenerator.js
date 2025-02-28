@@ -1,11 +1,14 @@
-// RadioNoiseGenerator.js - CW Radio Simulation for Morse Trainer
-class RadioNoiseGenerator {
+// FilterNoiseGenerator.js - CW Band Pass Filter Simulation for Morse Trainer
+class FilterNoiseGenerator {
   constructor() {
     this.audioContext = null;
     this.masterGain = null;
     this.noiseSource = null;
     this.filterChain = null;
     this.atmosphericOsc = null;
+    this.atmosphericOsc2 = null;
+    this.notchFilter = null;
+    this.notchLFO = null;
     this.isPlaying = false;
     
     // Default parameters
@@ -59,7 +62,27 @@ class RadioNoiseGenerator {
           break;
         case 'atmosphericIntensity':
           if (this.atmosphericGain) {
-            this.atmosphericGain.gain.value = value;
+            // Immediate effect for better feedback
+            const now = this.audioContext.currentTime;
+            this.atmosphericGain.gain.cancelScheduledValues(now);
+            this.atmosphericGain.gain.setValueAtTime(value * 3, now);
+          }
+          if (this.atmosphericGain2) {
+            const now = this.audioContext.currentTime;
+            this.atmosphericGain2.gain.cancelScheduledValues(now);
+            this.atmosphericGain2.gain.setValueAtTime(value * 2, now);
+          }
+          
+          // Restart drift with new settings for immediate effect
+          if (this.driftInterval) {
+            clearInterval(this.driftInterval);
+            this.setupDrift();
+          }
+          
+          // Also update any noise generation parameters that depend on atmospheric intensity
+          if (this.noiseSource) {
+            // Can't modify existing noise, but we can restart with new settings
+            // This would be invasive, so we just adjust the drift and existing oscillators
           }
           break;
         case 'driftSpeed':
@@ -153,22 +176,56 @@ class RadioNoiseGenerator {
 
   setupDrift() {
     // Frequency drift simulation
-    const driftInterval = 2000 / Math.max(0.1, this.params.driftSpeed);
+    const baseDriftInterval = 2000 / Math.max(0.1, this.params.driftSpeed);
     this.driftInterval = setInterval(() => {
       if (this.isPlaying && this.filterChain) {
-        const newFreq = this.params.filterFrequency + (Math.random() * 40 - 20);
+        // More complex drift with larger deviations based on atmospheric intensity
+        const driftRange = 40 + (this.params.atmosphericIntensity * 30); // Increased influence
+        const newFreq = this.params.filterFrequency + (Math.random() * driftRange - driftRange/2);
+        
+        // Use more noticeable drift for higher atmospheric values
+        const driftTime = this.params.atmosphericIntensity > 1.5 ? 0.2 : 0.5;
+        
+        // Use the current time to ensure accurate scheduling
+        const now = this.audioContext.currentTime;
+        
+        // Cancel any scheduled values to ensure our new values take effect
+        this.filterChain.bandpass1.frequency.cancelScheduledValues(now);
+        this.filterChain.bandpass2.frequency.cancelScheduledValues(now);
+        
+        // Set frequency with exponential ramp for more natural sound
         this.filterChain.bandpass1.frequency.setTargetAtTime(
           newFreq, 
-          this.audioContext.currentTime, 
-          0.5
+          now, 
+          driftTime
         );
         this.filterChain.bandpass2.frequency.setTargetAtTime(
           newFreq + 30, 
-          this.audioContext.currentTime, 
-          0.5
+          now, 
+          driftTime
         );
+        
+        // For high atmospheric intensity, add some randomness to the Q as well
+        if (this.params.atmosphericIntensity > 1.0) {
+          const qVariation = Math.random() * 10 * (this.params.atmosphericIntensity - 1.0);
+          const baseQ = this.params.filterResonance;
+          
+          this.filterChain.bandpass1.Q.cancelScheduledValues(now);
+          this.filterChain.bandpass2.Q.cancelScheduledValues(now);
+          
+          this.filterChain.bandpass1.Q.setTargetAtTime(
+            baseQ + qVariation,
+            now,
+            driftTime * 2
+          );
+          this.filterChain.bandpass2.Q.setTargetAtTime(
+            (baseQ + qVariation) * 0.8,
+            now,
+            driftTime * 2
+          );
+        }
       }
-    }, driftInterval);
+    }, baseDriftInterval);
   }
 
   createNoise() {
@@ -182,24 +239,27 @@ class RadioNoiseGenerator {
     let lastValue2 = 0;
     let phase = 0;
     
+    // Atmospheric intensity affects noise generation
+    const atmosphericFactor = Math.min(2, 0.5 + this.params.atmosphericIntensity);
+    
     for (let i = 0; i < bufferSize; i++) {
       // Brownian noise component (smoother than white noise)
-      const brown = (Math.random() * 2 - 1) * 0.02;
+      const brown = (Math.random() * 2 - 1) * 0.02 * atmosphericFactor;
       lastValue = (lastValue + brown) / 1.02;
       
       // Slow atmospheric modulation
       phase += 0.0001;
-      const slowVar = Math.sin(phase) * 0.05 * this.params.atmosphericIntensity;
+      const slowVar = Math.sin(phase) * 0.05 * this.params.atmosphericIntensity * 2;
       
       // Random pops and crackles
-      const pop = Math.random() > 0.9995 ? 
-        (Math.random() * 2 - 1) * this.params.crackleIntensity : 0;
+      const popProbability = 0.9995 - (this.params.atmosphericIntensity * 0.0001);
+      const pop = Math.random() > popProbability ? 
+        (Math.random() * 2 - 1) * this.params.crackleIntensity * atmosphericFactor : 0;
       
       lastValue2 = (lastValue2 + lastValue) / 2 + slowVar + pop;
       output[i] = lastValue2 * 3.0;
     }
-    
-    // Create a buffer source with the noise
+
     const noiseSource = this.audioContext.createBufferSource();
     noiseSource.buffer = noiseBuffer;
     noiseSource.loop = true;
@@ -212,10 +272,46 @@ class RadioNoiseGenerator {
     const atmosphericOsc = this.audioContext.createOscillator();
     this.atmosphericGain = this.audioContext.createGain();
     atmosphericOsc.frequency.value = 0.1;
-    this.atmosphericGain.gain.value = this.params.atmosphericIntensity;
+    this.atmosphericGain.gain.value = this.params.atmosphericIntensity * 3; // Enhanced atmospheric effect
     atmosphericOsc.connect(this.atmosphericGain);
     this.atmosphericGain.connect(filters.bandpass1.frequency);
     atmosphericOsc.start();
+
+    // Add a secondary atmospheric oscillator for more complex variations
+    const atmosphericOsc2 = this.audioContext.createOscillator();
+    this.atmosphericGain2 = this.audioContext.createGain();
+    atmosphericOsc2.frequency.value = 0.17; // Slightly different frequency for modulation
+    this.atmosphericGain2.gain.value = this.params.atmosphericIntensity * 2;
+    atmosphericOsc2.connect(this.atmosphericGain2);
+    this.atmosphericGain2.connect(filters.bandpass2.frequency);
+    atmosphericOsc2.start();
+
+    // Add more dynamic filtering for higher atmospheric settings
+    if (this.params.atmosphericIntensity > 1.0) {
+      // Add a slight notch filter that moves over time for atmospheric shimmer
+      const notchFilter = this.audioContext.createBiquadFilter();
+      notchFilter.type = 'notch';
+      notchFilter.frequency.value = this.params.filterFrequency * 1.5;
+      notchFilter.Q.value = 8;
+      
+      // Connect it after the bandpass filtering
+      filters.bandpass2.disconnect();
+      filters.bandpass2.connect(notchFilter);
+      notchFilter.connect(filters.peaking1);
+      
+      // Set up an LFO for the notch
+      const notchLFO = this.audioContext.createOscillator();
+      const notchLFOGain = this.audioContext.createGain();
+      notchLFO.frequency.value = 0.05;
+      notchLFOGain.gain.value = 100 * this.params.atmosphericIntensity;
+      notchLFO.connect(notchLFOGain);
+      notchLFOGain.connect(notchFilter.frequency);
+      notchLFO.start();
+      
+      // Store references for cleanup
+      this.notchFilter = notchFilter;
+      this.notchLFO = notchLFO;
+    }
 
     // Connect noise to the filter chain
     noiseSource.connect(filters.bandpass1);
@@ -227,7 +323,8 @@ class RadioNoiseGenerator {
 
     return {
       source: noiseSource,
-      oscillator: atmosphericOsc
+      oscillator: atmosphericOsc,
+      oscillator2: atmosphericOsc2
     };
   }
 
@@ -241,6 +338,7 @@ class RadioNoiseGenerator {
     const nodes = this.createNoise();
     this.noiseSource = nodes.source;
     this.atmosphericOsc = nodes.oscillator;
+    this.atmosphericOsc2 = nodes.oscillator2;
     this.noiseSource.start();
   }
 
@@ -269,6 +367,24 @@ class RadioNoiseGenerator {
       this.atmosphericOsc = null;
     }
     
+    if (this.atmosphericOsc2) {
+      try {
+        this.atmosphericOsc2.stop(stopTime);
+      } catch (e) {
+        console.warn('Error stopping second atmospheric oscillator:', e);
+      }
+      this.atmosphericOsc2 = null;
+    }
+    
+    if (this.notchLFO) {
+      try {
+        this.notchLFO.stop(stopTime);
+      } catch (e) {
+        console.warn('Error stopping notch LFO:', e);
+      }
+      this.notchLFO = null;
+    }
+    
     // Clear intervals
     if (this.jumpInterval) {
       clearInterval(this.jumpInterval);
@@ -281,11 +397,12 @@ class RadioNoiseGenerator {
     }
     
     this.filterChain = null;
+    this.notchFilter = null;
   }
 
   setVolume(value) {
     if (this.masterGain) {
-      this.masterGain.gain.value = Math.max(0, Math.min(1, value));
+      this.masterGain.gain.value = Math.max(0, Math.min(1.5, value));
     }
   }
 
@@ -307,4 +424,4 @@ class RadioNoiseGenerator {
   }
 }
 
-export const radioNoise = new RadioNoiseGenerator();
+export const filterNoise = new FilterNoiseGenerator();

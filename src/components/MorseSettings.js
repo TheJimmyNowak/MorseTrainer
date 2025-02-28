@@ -13,13 +13,12 @@ export class MorseSettings {
       headCopyMode: false,
       hideChars: false,
       qsbAmount: 0,
-      qrnAmount: 0,
       levelSpacing: 1000,    // Time between repeated sequences
       transitionDelay: 500,  // Time before starting new sequence after changes
       
-      // Radio noise default settings
+      // Filter noise default settings
       radioNoiseEnabled: false,
-      radioNoiseVolume: 0.2,
+      radioNoiseVolume: 0.5,
       radioNoiseResonance: 25,
       radioNoiseWarmth: 8,
       radioNoiseDrift: 0.5,
