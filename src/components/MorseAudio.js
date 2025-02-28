@@ -1,4 +1,4 @@
-// MorseAudio.js - Optimized version with fixes
+// MorseAudio.js - Optimized version with integration for FilterNoise
 class MorseAudioManager {
   constructor() {
     if (MorseAudioManager.instance) {
@@ -9,9 +9,6 @@ class MorseAudioManager {
     this.audioContext = null;
     this.masterGain = null;
     this.oscillatorNode = null;
-    this.qrnNoiseNode = null;
-    this.qrnGainNode = null;
-    this.qrnFilter = null;
 
     // State management
     this.isPlaying = false;
@@ -23,7 +20,6 @@ class MorseAudioManager {
     // Audio parameters
     this.frequency = 700;
     this.qsbAmount = 0;
-    this.qrnAmount = 0;
     this.currentSequence = '';
     this.currentWpm = 20;
     this.farnsworthSpacing = 0;
@@ -36,7 +32,9 @@ class MorseAudioManager {
 
     // Performance optimizations
     this.scheduledEvents = new Map();
-    this.audioWorkletLoaded = false;
+    
+    // Volume setting - used by FilterNoise to sync its volume
+    this.volume = 0.8;
 
     MorseAudioManager.instance = this;
   }
@@ -88,43 +86,6 @@ class MorseAudioManager {
     }
   }
 
-  createNoiseGenerator() {
-    if (!this.isInitialized) return null;
-
-    const bufferSize = this.audioContext.sampleRate;
-    const noiseBuffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-    const output = noiseBuffer.getChannelData(0);
-
-    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0;
-
-    // Use a more efficient buffer generation method
-    for (let i = 0; i < bufferSize; i++) {
-      const white = Math.random() * 2 - 1;
-
-      // Optimized pink noise generation
-      b0 = 0.99886 * b0 + white * 0.0555179;
-      b1 = 0.99332 * b1 + white * 0.0750759;
-      b2 = 0.96900 * b2 + white * 0.1538520;
-      b3 = 0.86650 * b3 + white * 0.3104856;
-      b4 = 0.55000 * b4 + white * 0.5329522;
-      b5 = -0.7616 * b5 - white * 0.0168980;
-
-      output[i] = ((b0 + b1 + b2 + b3 + b4 + b5) / 6 * 0.7 + white * 0.3) * 0.5;
-    }
-
-    const noiseNode = this.audioContext.createBufferSource();
-    noiseNode.buffer = noiseBuffer;
-    noiseNode.loop = true;
-
-    const bandpass = this.audioContext.createBiquadFilter();
-    bandpass.type = 'bandpass';
-    bandpass.frequency.value = this.frequency;
-    bandpass.Q.value = 1.5;
-
-    noiseNode.connect(bandpass);
-    return { source: noiseNode, filter: bandpass };
-  }
-
   clearScheduledEvents() {
     if (!this.audioContext) return;
 
@@ -159,76 +120,15 @@ class MorseAudioManager {
       this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, now);
       this.masterGain.gain.linearRampToValueAtTime(0, now + this.releaseTime);
     }
-
-    if (this.qrnNoiseNode) {
-      try {
-        this.qrnNoiseNode.stop();
-        this.qrnNoiseNode.disconnect();
-      } catch (e) {
-        console.warn('Error stopping QRN noise:', e);
-      }
-      this.qrnNoiseNode = null;
-    }
-
-    if (this.qrnFilter) {
-      try {
-        this.qrnFilter.disconnect();
-      } catch (e) {
-        console.warn('Error disconnecting QRN filter:', e);
-      }
-      this.qrnFilter = null;
-    }
-
-    if (this.qrnGainNode) {
-      try {
-        this.qrnGainNode.disconnect();
-      } catch (e) {
-        console.warn('Error disconnecting QRN gain:', e);
-      }
-      this.qrnGainNode = null;
-    }
   }
 
   setQsbAmount(amount) {
     this.qsbAmount = Math.max(0, Math.min(100, amount));
   }
 
-  setQrnAmount(amount) {
-    this.qrnAmount = Math.max(0, Math.min(100, amount));
-
-    if (this.isInitialized && this.audioContext) {
-      // Create or update QRN noise
-      if (amount > 0) {
-        if (!this.qrnNoiseNode) {
-          const noise = this.createNoiseGenerator();
-          this.qrnNoiseNode = noise.source;
-          this.qrnFilter = noise.filter;
-          this.qrnGainNode = this.audioContext.createGain();
-
-          this.qrnFilter.connect(this.qrnGainNode);
-          this.qrnGainNode.connect(this.audioContext.destination);
-          this.qrnNoiseNode.start();
-        }
-
-        const scaledGain = (amount / 100) ** 1.5 * 0.15;
-        this.qrnGainNode.gain.setValueAtTime(scaledGain, this.audioContext.currentTime);
-      } else if (this.qrnNoiseNode) {
-        // Clean up QRN if setting to 0
-        this.qrnNoiseNode.stop();
-        this.qrnNoiseNode.disconnect();
-        this.qrnNoiseNode = null;
-
-        if (this.qrnFilter) {
-          this.qrnFilter.disconnect();
-          this.qrnFilter = null;
-        }
-
-        if (this.qrnGainNode) {
-          this.qrnGainNode.disconnect();
-          this.qrnGainNode = null;
-        }
-      }
-    }
+  // Helper method to provide current volume for filter noise sync
+  getCurrentVolume() {
+    return this.volume;
   }
 
   generateQsbProfile(dotLength, chars) {
@@ -255,18 +155,21 @@ class MorseAudioManager {
 
     // Apply QSB (signal fading) to the amplitude
     const qsbAmplitude = amplitude * (1 - (this.qsbAmount / 100) * Math.random());
+    
+    // Scale by master volume setting
+    const scaledAmplitude = qsbAmplitude * this.volume;
 
-    // Schedule the ADSR envelope with QSB
+    // Schedule the ADSR envelope with QSB and volume scaling
     gainNode.gain.cancelScheduledValues(startTime);
     gainNode.gain.setValueAtTime(0, startTime);
-    gainNode.gain.linearRampToValueAtTime(qsbAmplitude, startTime + this.attackTime);
+    gainNode.gain.linearRampToValueAtTime(scaledAmplitude, startTime + this.attackTime);
     gainNode.gain.linearRampToValueAtTime(
-      this.sustainLevel * qsbAmplitude,
+      this.sustainLevel * scaledAmplitude,
       startTime + this.attackTime + this.decayTime
     );
 
     const releaseStart = startTime + duration - this.releaseTime;
-    gainNode.gain.setValueAtTime(this.sustainLevel * qsbAmplitude, releaseStart);
+    gainNode.gain.setValueAtTime(this.sustainLevel * scaledAmplitude, releaseStart);
     gainNode.gain.linearRampToValueAtTime(0, releaseStart + this.releaseTime);
 
     // Store scheduled event for cleanup
@@ -325,22 +228,6 @@ class MorseAudioManager {
       const qsbProfile = this.generateQsbProfile(dotLength, chars);
       let currentTime = this.audioContext.currentTime + 0.1; // Small scheduling delay
 
-      // Set up QRN if needed
-      if (this.qrnAmount > 0) {
-        if (!this.qrnNoiseNode) {
-          const noise = this.createNoiseGenerator();
-          this.qrnNoiseNode = noise.source;
-          this.qrnFilter = noise.filter;
-          this.qrnGainNode = this.audioContext.createGain();
-          const scaledGain = (this.qrnAmount / 100) ** 1.5 * 0.15;
-          this.qrnGainNode.gain.value = scaledGain;
-
-          this.qrnFilter.connect(this.qrnGainNode);
-          this.qrnGainNode.connect(this.audioContext.destination);
-          this.qrnNoiseNode.start();
-        }
-      }
-
       //Check if chars should be played together
       if (chars.includes('\uFE26')) this.combined = true;
 
@@ -360,7 +247,7 @@ class MorseAudioManager {
           currentTime += duration + dotLength; // Add inter-symbol space
         }
 
-        //ommit space if chars are combined
+        //omit space if chars are combined
         if (this.combined) {
           currentTime += extraSpace;
         } else {
@@ -399,9 +286,11 @@ class MorseAudioManager {
     if (this.oscillatorNode) {
       this.oscillatorNode.frequency.setValueAtTime(freq, this.audioContext.currentTime);
     }
-    if (this.qrnFilter) {
-      this.qrnFilter.frequency.value = freq;
-    }
+  }
+
+  setVolume(volume) {
+    this.volume = Math.max(0, Math.min(1, volume));
+    // No need to set gain directly as it's applied when scheduling notes
   }
 
   async start() {

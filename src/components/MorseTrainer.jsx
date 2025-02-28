@@ -123,6 +123,12 @@ const MorseTrainer = () => {
     }
   }, [frequency, radioNoiseEnabled]);
 
+  // Sync Morse audio volume with filter noise
+  useEffect(() => {
+    // When morseAudio's volume changes, update the reference in filterNoise
+    filterNoise.setMorseAudioVolume(morseAudio.getCurrentVolume());
+  }, [isPlaying]); // Add any other dependencies that might affect Morse volume
+
   useEffect(() => {
     // Start or stop the filter noise based on the enabled state
     if (radioNoiseEnabled && isPlaying) {
@@ -190,6 +196,8 @@ const MorseTrainer = () => {
 
       // Start filter noise if enabled
       if (radioNoiseEnabled) {
+        // Ensure the filter noise has the latest Morse volume reference
+        filterNoise.setMorseAudioVolume(morseAudio.getCurrentVolume());
         filterNoise.start();
       }
     };
@@ -435,6 +443,13 @@ const MorseTrainer = () => {
   const handleWpmChange = (delta) => {
     const newWpm = Math.max(5, Math.min(50, wpm + delta));
     setWpm(newWpm);
+
+    // If Morse is playing, update filter noise to match potential volume changes
+    if (isPlaying && radioNoiseEnabled) {
+      // Update reference to current Morse audio volume
+      filterNoise.setMorseAudioVolume(morseAudio.getCurrentVolume());
+    }
+
     if (isPlaying) {
       morseAudio.stop();
       if (radioNoiseEnabled) filterNoise.stop();

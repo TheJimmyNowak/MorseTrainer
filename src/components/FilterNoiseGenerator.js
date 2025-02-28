@@ -22,6 +22,10 @@ class FilterNoiseGenerator {
       driftSpeed: 0.5           // Frequency drift speed
     };
     
+    // Reference volume settings
+    this.morseAudioVolume = 0.8; // Default Morse audio volume
+    this.relativeVolume = 0.5;   // Default relative volume (50% of Morse volume)
+    
     // Cleanup handles
     this.jumpInterval = null;
     this.driftInterval = null;
@@ -35,12 +39,26 @@ class FilterNoiseGenerator {
       });
       
       this.masterGain = this.audioContext.createGain();
-      this.masterGain.gain.value = 0.2; // Default to a lower volume
+      // Initialize with relative volume calculation
+      this.masterGain.gain.value = this.calculateRelativeVolume();
       this.masterGain.connect(this.audioContext.destination);
     }
     
     if (this.audioContext.state === 'suspended') {
       await this.audioContext.resume();
+    }
+  }
+
+  // Calculate volume based on relative percentage to Morse audio volume
+  calculateRelativeVolume() {
+    return this.morseAudioVolume * this.relativeVolume;
+  }
+
+  // Set the reference Morse audio volume
+  setMorseAudioVolume(volume) {
+    this.morseAudioVolume = volume;
+    if (this.masterGain) {
+      this.masterGain.gain.value = this.calculateRelativeVolume();
     }
   }
 
@@ -77,12 +95,6 @@ class FilterNoiseGenerator {
           if (this.driftInterval) {
             clearInterval(this.driftInterval);
             this.setupDrift();
-          }
-          
-          // Also update any noise generation parameters that depend on atmospheric intensity
-          if (this.noiseSource) {
-            // Can't modify existing noise, but we can restart with new settings
-            // This would be invasive, so we just adjust the drift and existing oscillators
           }
           break;
         case 'driftSpeed':
@@ -401,8 +413,9 @@ class FilterNoiseGenerator {
   }
 
   setVolume(value) {
+    this.relativeVolume = Math.max(0, Math.min(1.5, value));
     if (this.masterGain) {
-      this.masterGain.gain.value = Math.max(0, Math.min(1.5, value));
+      this.masterGain.gain.value = this.calculateRelativeVolume();
     }
   }
 

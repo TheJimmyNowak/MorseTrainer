@@ -35,7 +35,7 @@ export const FilterNoiseControls = ({
       {isEnabled && (
         <>
           <div className="bg-gray-700/50 p-3 rounded-lg">
-            <div className="text-sm mb-2">Noise Volume</div>
+            <div className="text-sm mb-2">Noise Volume (relative to CW tone)</div>
             <div className="flex items-center gap-2">
               <InteractiveButton
                 onClick={() => onVolumeChange(-0.1)}
@@ -49,7 +49,9 @@ export const FilterNoiseControls = ({
                     style={{ width: `${(volume / 1.5) * 100}%` }}
                   />
                 </div>
-                <div className="text-center mt-1">{Math.round(volume * 100)}%</div>
+                <div className="text-center mt-1">
+                  {Math.round(volume * 100)}% {volume > 1 ? '(louder than CW)' : ''}
+                </div>
               </div>
               <InteractiveButton
                 onClick={() => onVolumeChange(0.1)}
@@ -108,7 +110,7 @@ export const FilterNoiseControls = ({
               >+</InteractiveButton>
             </div>
           </div>
-          
+
           <div className="bg-gray-700/50 p-3 rounded-lg">
             <div className="text-sm mb-2">Frequency Drift</div>
             <div className="flex items-center gap-2">
