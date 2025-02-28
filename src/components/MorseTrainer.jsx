@@ -3,10 +3,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MorseUI from './MorseUI';
 import { morseAudio } from './MorseAudio';
-import { filterNoise } from './FilterNoiseGenerator'; // Import the filter noise generator
+import { filterNoise } from './FilterNoiseGenerator';
 import { MorseSequences } from './MorseSequences';
 import { MorseSettings } from './MorseSettings';
 import { useCustomAlphabet } from './CustomAlphabetManager';
+import { PerformanceDataManager } from './PerformanceDataManager';
 
 const MorseTrainer = () => {
   const morseRef = useRef(new MorseSequences());
@@ -75,7 +76,14 @@ const MorseTrainer = () => {
   const [currentGroup, setCurrentGroup] = useState('');
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
   const [history, setHistory] = useState([]);
-  const [performanceData, setPerformanceData] = useState([]);
+  // Load performance data from cookies during initialization
+  const [performanceData, setPerformanceData] = useState(() => {
+    // Only attempt to load from cookies in browser environment
+    if (typeof window !== 'undefined') {
+      return PerformanceDataManager.load();
+    }
+    return [];
+  });
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [notification, setNotification] = useState('');
@@ -100,6 +108,13 @@ const MorseTrainer = () => {
       }
     };
   }, [customSequence]);
+
+  // Save performance data to cookies whenever it changes
+  useEffect(() => {
+    if (performanceData.length > 0) {
+      PerformanceDataManager.save(performanceData);
+    }
+  }, [performanceData]);
 
   useEffect(() => {
     // Update the filter noise frequency to match the Morse tone
@@ -191,6 +206,8 @@ const MorseTrainer = () => {
       const newData = [...prev];
       const timestamp = new Date().getTime();
 
+      // Calculate rolling accuracy from the last 10 attempts
+      // Use previous data if available, otherwise just the new entry
       const lastTenAttempts = newData.slice(-9).concat([{ isCorrect }]);
       const rollingAccuracy = lastTenAttempts.reduce((acc, curr) =>
         acc + (curr.isCorrect ? 1 : 0), 0) / lastTenAttempts.length * 100;
@@ -203,6 +220,7 @@ const MorseTrainer = () => {
         level,
       });
 
+      // Keep only the last 100 entries
       return newData.slice(-100);
     });
   }, []);
@@ -374,10 +392,11 @@ const MorseTrainer = () => {
       setCurrentGroup('');
       setUserInput('');
       setHistory([]);
+      // Do NOT reset performance data when stopping
+      // setPerformanceData([]);
       setScore({ correct: 0, wrong: 0 });
       setConsecutiveCorrect(0);
       setCurrentGroupSize(0);
-      setPerformanceData([]);
       setShowAnswer(false);
     } else {
       startNewGroup(currentLevel);
@@ -536,6 +555,13 @@ const MorseTrainer = () => {
     };
   }, [isPlaying, isPaused, currentLevel, showNotification, startNewGroup, transitionDelay, radioNoiseEnabled]);
 
+  // Add a function to clear performance data (for testing/debugging)
+  const clearPerformanceData = () => {
+    PerformanceDataManager.clear();
+    setPerformanceData([]);
+    showNotification('Performance data cleared', 'red', 2000);
+  };
+
   return (
     <>
       <MorseUI
@@ -598,6 +624,8 @@ const MorseTrainer = () => {
         onRadioNoiseAtmosphericChange={handleRadioNoiseAtmosphericChange}
         radioNoiseCrackle={radioNoiseCrackle}
         onRadioNoiseCrackleChange={handleRadioNoiseCrackleChange}
+        // Debug function - remove for production if desired
+        onClearPerformanceData={clearPerformanceData}
       />
 
       <CustomAlphabetModal
