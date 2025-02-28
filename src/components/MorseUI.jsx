@@ -3,6 +3,7 @@ import { AnimatedSection } from './AnimatedSection';
 import { PresetDropdown } from './PresetDropdown';
 import { ControlPanel } from './ControlPanel';
 import { QualityControls } from './QualityControls';
+import { RadioNoiseControls } from './RadioNoiseControls'; // Import the new RadioNoiseControls
 import { CharacterDisplay } from './CharacterDisplay';
 import { CharacterGrid } from './CharacterGrid';
 import { ScoreDisplay } from './ScoreDisplay';
@@ -62,6 +63,21 @@ const MorseUI = ({
   onLevelSpacingChange,
   transitionDelay,
   onTransitionDelayChange,
+  // Radio noise props
+  radioNoiseEnabled,
+  onRadioNoiseToggle,
+  radioNoiseVolume,
+  onRadioNoiseVolumeChange,
+  radioNoiseResonance,
+  onRadioNoiseResonanceChange,
+  radioNoiseWarmth,
+  onRadioNoiseWarmthChange,
+  radioNoiseDrift,
+  onRadioNoiseDriftChange,
+  radioNoiseAtmospheric,
+  onRadioNoiseAtmosphericChange,
+  radioNoiseCrackle,
+  onRadioNoiseCrackleChange,
 }) => {
   const [mainButtonElement, setMainButtonElement] = useState(null);
   const [isPanelVisible, setIsPanelVisible] = useState(false);
@@ -208,6 +224,26 @@ const MorseUI = ({
                 transitionDelay={transitionDelay}
                 onTransitionDelayChange={onTransitionDelayChange}
               />
+              
+              {/* Radio Noise Controls (replacing QRN) */}
+              <RadioNoiseControls
+                isEnabled={radioNoiseEnabled}
+                onToggle={onRadioNoiseToggle}
+                volume={radioNoiseVolume}
+                onVolumeChange={onRadioNoiseVolumeChange}
+                resonance={radioNoiseResonance}
+                onResonanceChange={onRadioNoiseResonanceChange}
+                warmth={radioNoiseWarmth}
+                onWarmthChange={onRadioNoiseWarmthChange}
+                driftSpeed={radioNoiseDrift}
+                onDriftSpeedChange={onRadioNoiseDriftChange}
+                atmosphericNoise={radioNoiseAtmospheric}
+                onAtmosphericNoiseChange={onRadioNoiseAtmosphericChange}
+                crackleIntensity={radioNoiseCrackle}
+                onCrackleIntensityChange={onRadioNoiseCrackleChange}
+              />
+              
+              {/* Keep QSB for compatibility or historical purposes */}
               <QualityControls
                 qsbAmount={qsbAmount}
                 onQsbChange={onQsbChange}
