@@ -470,7 +470,7 @@ const MorseTrainer = () => {
   };
 
   const handleRadioNoiseVolumeChange = (delta) => {
-    const newVolume = Math.max(0, Math.min(1.5, radioNoiseVolume + delta));
+    const newVolume = Math.max(0, Math.min(5.0, radioNoiseVolume + delta));
     setRadioNoiseVolume(newVolume);
     filterNoise.setVolume(newVolume);
   };
@@ -494,7 +494,7 @@ const MorseTrainer = () => {
   };
 
   const handleRadioNoiseAtmosphericChange = (delta) => {
-    const newValue = Math.max(0, Math.min(3, radioNoiseAtmospheric + delta));
+    const newValue = Math.max(0, Math.min(8.0, radioNoiseAtmospheric + delta));
     setRadioNoiseAtmospheric(newValue);
     filterNoise.updateParameter('atmosphericIntensity', newValue);
   };
