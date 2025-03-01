@@ -2,8 +2,8 @@ import { Activity, History as HistoryIcon, Radio, Music, Settings } from 'lucide
 import { AnimatedSection } from './AnimatedSection';
 import { PresetDropdown } from './PresetDropdown';
 import { ControlPanel } from './ControlPanel';
-import { InteractiveButton } from './InteractiveButton'; // Import InteractiveButton
-import { FilterNoiseControls } from './RadioNoiseControls'; // Import the FilterNoiseControls component
+import { InteractiveButton } from './InteractiveButton';
+import { FilterNoiseControls } from './RadioNoiseControls';
 import { CharacterDisplay } from './CharacterDisplay';
 import { CharacterGrid } from './CharacterGrid';
 import { ScoreDisplay } from './ScoreDisplay';
@@ -16,6 +16,7 @@ import { FloatingNotification } from './Notification';
 import { MainButton } from './MainButton';
 import { ModeToggle } from './ModeToggle';
 import { SidePanel } from './SidePanel';
+import { RepeatControls } from './RepeatControls'; // Import our new component
 import { useState } from 'react';
 import { BetaBanner } from './BetaBanner';
 
@@ -26,6 +27,10 @@ const MorseUI = ({
   onLevelChange,
   groupSize,
   onGroupSizeChange,
+  minGroupSize,
+  onMinGroupSizeChange,
+  maxRepeats,
+  onMaxRepeatsChange,
   frequency,
   onFrequencyChange,
   wpm,
@@ -76,6 +81,7 @@ const MorseUI = ({
   onRadioNoiseAtmosphericChange,
   radioNoiseCrackle,
   onRadioNoiseCrackleChange,
+  onClearPerformanceData
 }) => {
   const [mainButtonElement, setMainButtonElement] = useState(null);
   const [isPanelVisible, setIsPanelVisible] = useState(false);
@@ -199,6 +205,15 @@ const MorseUI = ({
                 onAdvanceThresholdChange={onAdvanceThresholdChange}
                 consecutiveCorrect={consecutiveCorrect}
               />
+              
+              {/* Add the new RepeatControls component */}
+              <RepeatControls
+                minGroupSize={minGroupSize}
+                onMinGroupSizeChange={onMinGroupSizeChange}
+                maxRepeats={maxRepeats}
+                onMaxRepeatsChange={onMaxRepeatsChange}
+              />
+              
               <AvailableChars
                 availableChars={availableChars}
                 consecutiveCorrect={consecutiveCorrect}

@@ -26,6 +26,8 @@ const MorseTrainer = () => {
       wpm: settings.wpm,
       frequency: settings.frequency,
       groupSize: settings.groupSize,
+      minGroupSize: settings.minGroupSize || 1, // New - minimum group size
+      maxRepeats: settings.maxRepeats !== undefined ? settings.maxRepeats : -1, // New - max repeats
       advanceThreshold: settings.advanceThreshold,
       headCopyMode: settings.headCopyMode,
       hideChars: settings.hideChars,
@@ -41,7 +43,8 @@ const MorseTrainer = () => {
       radioNoiseWarmth: settings.radioNoiseWarmth || 8,
       radioNoiseDrift: settings.radioNoiseDrift || 0.5,
       radioNoiseAtmospheric: settings.radioNoiseAtmospheric || 0.5,
-      radioNoiseCrackle: settings.radioNoiseCrackle || 0.05
+      radioNoiseCrackle: settings.radioNoiseCrackle || 0.05,
+      farnsworthSpacing: settings.farnsworthSpacing || 0
     };
   };
 
@@ -50,6 +53,8 @@ const MorseTrainer = () => {
   const [wpm, setWpm] = useState(savedSettings.wpm);
   const [frequency, setFrequency] = useState(savedSettings.frequency);
   const [groupSize, setGroupSize] = useState(savedSettings.groupSize);
+  const [minGroupSize, setMinGroupSize] = useState(savedSettings.minGroupSize);
+  const [maxRepeats, setMaxRepeats] = useState(savedSettings.maxRepeats);
   const [advanceThreshold, setAdvanceThreshold] = useState(savedSettings.advanceThreshold);
   const [headCopyMode, setHeadCopyMode] = useState(savedSettings.headCopyMode);
   const [hideChars, setHideChars] = useState(savedSettings.hideChars);
@@ -92,9 +97,127 @@ const MorseTrainer = () => {
 
   const notificationTimeoutRef = useRef(null);
 
+  // First, define the showNotification function
+  const showNotification = useCallback((message, color = 'blue', duration = 2000) => {
+    // First clear any existing notification to avoid overlap
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+      notificationTimeoutRef.current = null;
+    }
+
+    // Set the new notification
+    setNotification({ message, color });
+
+    // Schedule its removal after duration
+    notificationTimeoutRef.current = setTimeout(() => {
+      setNotification(null);
+      notificationTimeoutRef.current = null;
+    }, duration);
+  }, []);
+
+  // Then define updatePerformanceData function
+  const updatePerformanceData = useCallback((isCorrect, level) => {
+    setPerformanceData(prev => {
+      const newData = [...prev];
+      const timestamp = new Date().getTime();
+
+      // Calculate rolling accuracy from the last 10 attempts
+      // Use previous data if available, otherwise just the new entry
+      const lastTenAttempts = newData.slice(-9).concat([{ isCorrect }]);
+      const rollingAccuracy = lastTenAttempts.reduce((acc, curr) =>
+        acc + (curr.isCorrect ? 1 : 0), 0) / lastTenAttempts.length * 100;
+
+      newData.push({
+        timestamp,
+        attempt: newData.length + 1,
+        isCorrect,
+        rollingAccuracy: Math.round(rollingAccuracy),
+        level,
+      });
+
+      // Keep only the last 100 entries
+      return newData.slice(-100);
+    });
+  }, []);
+
+  // Define startNewGroup first as it's referenced by handleMaxRepeatsReached
+  const startNewGroup = useCallback((level, delay = null) => {
+    const start = () => {
+      // Generate new group with proper size constraints
+      let newGroup = morseRef.current.generateGroup(level, groupSize, minGroupSize);
+
+      setCurrentGroup(newGroup);
+      setCurrentGroupSize(newGroup.length);
+      setUserInput('');
+      setShowAnswer(false);
+      setIsPlaying(true);
+
+      // Reset the repeat count when starting a new group
+      if (morseAudio.resetRepeatCount) {
+        morseAudio.resetRepeatCount();
+      }
+
+      morseAudio.start();
+      morseAudio.playSequence(newGroup, wpm, farnsworthSpacing, levelSpacing);
+
+      // Start filter noise if enabled
+      if (radioNoiseEnabled) {
+        // Ensure the filter noise has the latest Morse volume reference
+        filterNoise.setMorseAudioVolume(morseAudio.getCurrentVolume());
+        filterNoise.start();
+      }
+    };
+
+    if (delay !== null) {
+      setTimeout(start, delay);
+    } else {
+      start();
+    }
+  }, [groupSize, minGroupSize, wpm, farnsworthSpacing, levelSpacing, radioNoiseEnabled]);
+
+  // Handler for when max repeats is reached
+  const handleMaxRepeatsReached = useCallback(() => {
+    if (!isPlaying) return;
+
+    morseAudio.stop();
+    if (radioNoiseEnabled) filterNoise.stop();
+
+    setIsPlaying(false);
+
+    const emptyInput = "";
+
+    updatePerformanceData(false, currentLevel);
+    setScore(prev => ({ ...prev, wrong: prev.wrong + 1 }));
+    setHistory(prev => [...prev, { group: currentGroup, userInput: emptyInput, correct: false }]);
+    setConsecutiveCorrect(0);
+
+    const notificationDuration = Math.min(1500, transitionDelay - 200);
+    showNotification(`Max repeats (${maxRepeats}) reached - marked incorrect`, 'red', notificationDuration);
+
+    setTimeout(() => {
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+        setNotification(null);
+        notificationTimeoutRef.current = null;
+      }
+      startNewGroup(currentLevel);
+    }, transitionDelay);
+  }, [
+    isPlaying, radioNoiseEnabled, currentLevel, currentGroup,
+    maxRepeats, transitionDelay, showNotification,
+    updatePerformanceData, startNewGroup
+  ]);
+
   useEffect(() => {
     morseAudio.initialize();
     setCurrentPreset(morseRef.current.getCurrentPreset());
+
+    // Add resetRepeatCount method to morseAudio if it doesn't exist
+    if (!morseAudio.resetRepeatCount) {
+      morseAudio.resetRepeatCount = function() {
+        this.repeatCount = 0;
+      };
+    }
 
     if (customSequence) {
       morseRef.current.updateCustomSequence(customSequence);
@@ -108,6 +231,11 @@ const MorseTrainer = () => {
       }
     };
   }, [customSequence]);
+
+  // Set max repeats callback in Morse Audio
+  useEffect(() => {
+    morseAudio.setMaxRepeats(maxRepeats, handleMaxRepeatsReached);
+  }, [maxRepeats, handleMaxRepeatsReached]);
 
   // Save performance data to cookies whenever it changes
   useEffect(() => {
@@ -146,6 +274,8 @@ const MorseTrainer = () => {
       frequency,
       farnsworthSpacing,
       groupSize,
+      minGroupSize,
+      maxRepeats,
       advanceThreshold,
       headCopyMode,
       hideChars,
@@ -164,74 +294,13 @@ const MorseTrainer = () => {
       radioNoiseCrackle
     });
   }, [
-    currentLevel, wpm, frequency, farnsworthSpacing, groupSize, advanceThreshold,
-    headCopyMode, hideChars, qsbAmount, currentPreset, progressiveSpeedMode,
+    currentLevel, wpm, frequency, farnsworthSpacing, groupSize, minGroupSize, maxRepeats,
+    advanceThreshold, headCopyMode, hideChars, qsbAmount, currentPreset, progressiveSpeedMode,
     levelSpacing, transitionDelay,
     // Include filter noise settings
     radioNoiseEnabled, radioNoiseVolume, radioNoiseResonance, radioNoiseWarmth,
     radioNoiseDrift, radioNoiseAtmospheric, radioNoiseCrackle
   ]);
-
-  const showNotification = useCallback((message, color = 'blue', duration = 2000) => {
-    setNotification({ message, color });
-    if (notificationTimeoutRef.current) {
-      clearTimeout(notificationTimeoutRef.current);
-    }
-    notificationTimeoutRef.current = setTimeout(() => {
-      setNotification(null);
-      notificationTimeoutRef.current = null;
-    }, duration);
-  }, []);
-
-  const startNewGroup = useCallback((level, delay = null) => {
-    const start = () => {
-      const newGroup = morseRef.current.generateGroup(level, groupSize);
-      setCurrentGroup(newGroup);
-      setCurrentGroupSize(newGroup.length);
-      setUserInput('');
-      setShowAnswer(false);
-      setIsPlaying(true);
-      morseAudio.start();
-      morseAudio.playSequence(newGroup, wpm, farnsworthSpacing, levelSpacing);
-
-      // Start filter noise if enabled
-      if (radioNoiseEnabled) {
-        // Ensure the filter noise has the latest Morse volume reference
-        filterNoise.setMorseAudioVolume(morseAudio.getCurrentVolume());
-        filterNoise.start();
-      }
-    };
-
-    if (delay !== null) {
-      setTimeout(start, delay);
-    } else {
-      start();
-    }
-  }, [groupSize, wpm, farnsworthSpacing, levelSpacing, radioNoiseEnabled]);
-
-  const updatePerformanceData = useCallback((isCorrect, level) => {
-    setPerformanceData(prev => {
-      const newData = [...prev];
-      const timestamp = new Date().getTime();
-
-      // Calculate rolling accuracy from the last 10 attempts
-      // Use previous data if available, otherwise just the new entry
-      const lastTenAttempts = newData.slice(-9).concat([{ isCorrect }]);
-      const rollingAccuracy = lastTenAttempts.reduce((acc, curr) =>
-        acc + (curr.isCorrect ? 1 : 0), 0) / lastTenAttempts.length * 100;
-
-      newData.push({
-        timestamp,
-        attempt: newData.length + 1,
-        isCorrect,
-        rollingAccuracy: Math.round(rollingAccuracy),
-        level,
-      });
-
-      // Keep only the last 100 entries
-      return newData.slice(-100);
-    });
-  }, []);
 
   const handleProgressiveSpeedToggle = useCallback(() => {
     setProgressiveSpeedMode(prev => !prev);
@@ -431,6 +500,21 @@ const MorseTrainer = () => {
     }
   };
 
+  const handleMinGroupSizeChange = (delta) => {
+    const newSize = Math.max(1, Math.min(10, minGroupSize + delta));
+    setMinGroupSize(newSize);
+    if (isPlaying) {
+      morseAudio.stop();
+      if (radioNoiseEnabled) filterNoise.stop();
+      startNewGroup(currentLevel, transitionDelay);
+    }
+  };
+
+  const handleMaxRepeatsChange = (newValue) => {
+    setMaxRepeats(newValue);
+    // No need to restart playback - will apply on next sequence
+  };
+
   const handleFrequencyChange = (delta) => {
     const newFreq = Math.max(400, Math.min(1000, frequency + delta));
     setFrequency(newFreq);
@@ -586,6 +670,11 @@ const MorseTrainer = () => {
         onLevelChange={handleLevelChange}
         groupSize={groupSize}
         onGroupSizeChange={handleGroupSizeChange}
+        // New min group size and max repeats
+        minGroupSize={minGroupSize}
+        onMinGroupSizeChange={handleMinGroupSizeChange}
+        maxRepeats={maxRepeats}
+        onMaxRepeatsChange={handleMaxRepeatsChange}
         frequency={frequency}
         onFrequencyChange={handleFrequencyChange}
         wpm={wpm}

@@ -1,14 +1,7 @@
 export const History = ({ history }) => {
   const ComparisonDisplay = ({ expected, actual }) => {
-    // If actual is undefined, log it to help us debug
-    if (!actual) {
-      console.warn('Received undefined actual input for entry:', { expected, actual });
-      return (
-        <div className="text-yellow-500">
-          Error: Missing user input data
-        </div>
-      );
-    }
+    // If actual is undefined or empty, fill with underscores instead of showing an error
+    const displayInput = actual || '_'.repeat(expected.length);
 
     return (
       <div className="flex flex-col gap-2">
@@ -23,7 +16,7 @@ export const History = ({ history }) => {
           <span className="text-gray-400 w-20">Typed:</span>
           <div className="font-mono text-lg flex">
             {expected.split('').map((expectedChar, i) => {
-              const actualChar = actual[i];
+              const actualChar = displayInput[i] || '_';
               const isCorrect = actualChar === expectedChar;
 
               return (
@@ -56,11 +49,6 @@ export const History = ({ history }) => {
       </div>
       <div className="max-h-96 overflow-y-auto px-4 py-3 space-y-3">
         {history.slice().reverse().map((entry, i) => {
-          // Log any entries with missing userInput to help debug
-          if (!entry.userInput) {
-            console.warn('History entry missing userInput:', entry);
-          }
-
           return (
             <div
               key={i}

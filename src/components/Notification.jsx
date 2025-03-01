@@ -27,9 +27,9 @@ export const FloatingNotification = ({ notification, buttonElement }) => {
 
   return (
     <div
-      className="fixed z-50 transform -translate-x-1/2 -translate-y-1/2"
+      className="fixed z-30 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
       style={{
-        top: '50vh',
+        top: '40vh', // Moved higher to not block as much of the content
         left: `${position.left}px`,
       }}
     >
@@ -81,8 +81,8 @@ export const Notification = ({ message, color = 'blue', onDismiss }) => {
       className={`bg-gradient-to-r ${colors[color] || colors.blue}
         text-white px-6 py-4 rounded-xl shadow-2xl border border-white/10
         backdrop-blur-sm animate-notification-fade-in relative
-        transition-opacity duration-200 overflow-hidden
-        ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        transition-opacity duration-200 overflow-hidden pointer-events-none
+        ${isVisible ? 'opacity-90' : 'opacity-0'}`}
     >
       <div className="text-base font-medium text-center break-words mb-2">
         {message}

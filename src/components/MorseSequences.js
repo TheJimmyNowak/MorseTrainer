@@ -171,12 +171,13 @@ export class MorseSequences {
     return n * this.factorial(n - 1);
   }
 
-  generateGroup(level, maxSize) {
+  generateGroup(level, maxSize, minSize = 1) {
     const available = this.currentSequence.slice(0, Math.min(level, this.currentSequence.length));
-    
+
     if (this.currentPreset.type === 'character') {
       this.updateWeightsForLevel(level);
-      const actualSize = Math.floor(Math.random() * maxSize) + 1;
+      // Ensure the group size is at least minSize but not larger than maxSize
+      const actualSize = Math.max(minSize, Math.floor(Math.random() * (maxSize - minSize + 1)) + minSize);
 
       let selectedChars;
       const newChar = this.currentSequence[level - 1];

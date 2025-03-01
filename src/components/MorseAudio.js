@@ -1,4 +1,4 @@
-// MorseAudio.js - Optimized version with integration for FilterNoise
+// MorseAudio.js - Optimized version with integration for FilterNoise and repeats handling
 class MorseAudioManager {
   constructor() {
     if (MorseAudioManager.instance) {
@@ -23,6 +23,11 @@ class MorseAudioManager {
     this.currentSequence = '';
     this.currentWpm = 20;
     this.farnsworthSpacing = 0;
+
+    // Repeat counter
+    this.repeatCount = 0;
+    this.maxRepeats = -1; // -1 means infinite repeats
+    this.onMaxRepeatsReached = null;
 
     // ADSR envelope settings
     this.attackTime = 0.005;
@@ -86,6 +91,15 @@ class MorseAudioManager {
     }
   }
 
+  setMaxRepeats(maxRepeats, callback) {
+    this.maxRepeats = maxRepeats;
+    this.onMaxRepeatsReached = callback;
+  }
+
+  resetRepeatCount() {
+    this.repeatCount = 0;
+  }
+
   clearScheduledEvents() {
     if (!this.audioContext) return;
 
@@ -112,6 +126,9 @@ class MorseAudioManager {
 
     // Clear all scheduled events
     this.scheduledEvents.clear();
+
+    // Reset repeat count
+    this.repeatCount = 0;
 
     // Efficiently stop and clean up audio nodes
     if (this.audioContext && this.masterGain) {
@@ -195,6 +212,7 @@ class MorseAudioManager {
     this.abortController = new AbortController();
     this.isPlaying = true;
     this.combined = false;
+    this.repeatCount = 0; // Reset repeat counter for new sequence
 
     // Reset master gain node for new sequence
     const now = this.audioContext.currentTime;
@@ -259,7 +277,20 @@ class MorseAudioManager {
       if (this.isPlaying) {
         this.activeTimeout = setTimeout(() => {
           if (this.isPlaying) {
-            this.playSequence(chars, wpm, farnsworthSpacing);
+            // Increment repeat count and check if we've reached the max
+            this.repeatCount++;
+            
+            if (this.maxRepeats !== -1 && this.repeatCount >= this.maxRepeats) {
+              if (this.onMaxRepeatsReached) {
+                // Call the callback when max repeats reached
+                this.isPlaying = false; // Immediately mark as not playing
+                this.onMaxRepeatsReached();
+                return; // Do not schedule another repeat
+              }
+            }
+            
+            // Continue playing the sequence
+            this.playSequence(chars, wpm, farnsworthSpacing, levelSpacing);
           }
         }, (currentTime - this.audioContext.currentTime) * 1000 + levelSpacing);
       }
@@ -271,6 +302,10 @@ class MorseAudioManager {
       console.error('Playback error:', e);
       this.stopAll();
     }
+  }
+
+  getRepeatCount() {
+    return this.repeatCount;
   }
 
   isActive() {

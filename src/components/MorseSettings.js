@@ -9,6 +9,8 @@ export class MorseSettings {
       farnsworthSpacing: 0,
       frequency: 600,
       groupSize: 3,
+      minGroupSize: 1,         // New setting for minimum group size
+      maxRepeats: -1,          // New setting for max repeats (-1 means infinite)
       advanceThreshold: 3,
       headCopyMode: false,
       hideChars: false,
