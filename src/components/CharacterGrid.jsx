@@ -1,35 +1,53 @@
 import { InteractiveButton } from './InteractiveButton';
+import { SEQUENCE_PRESETS } from './MorseSequences';
 
 export const CharacterGrid = ({ availableChars, onCharacterInput, currentPreset }) => {
-  let chars = [];
-  const numberToLetter = {
-    '1': 'T', '2': 'A', '3': 'U', '4': 'V', '5': '5',
-    '6': '6', '7': 'B', '8': 'D', '9': 'N', '0': 'O'
-  };
+  let numberToLetter = {};
 
+  let chars = Array.isArray(availableChars) ? availableChars : availableChars.split('');
   if (currentPreset?.id === 'cut_numbers') {
-    chars = ['1','2','3','4','5','6','7','8','9','0', '\u232B'];
-  } else {
-    chars = Array.isArray(availableChars) ? availableChars : availableChars.split('');
-    chars = [...new Set(chars.join('').replace(/[\s\uFE26]+/g, '').split(''))].sort();
-    chars.push('\u232B');
-  }
+    const mappedChars = chars.map(c => SEQUENCE_PRESETS.CUT_NUMBERS.translation[c] || c);
+    for (const c of mappedChars) {
+      numberToLetter[c] = Object.entries(SEQUENCE_PRESETS.CUT_NUMBERS.translation)
+        .filter(([k, v]) => v === c && chars.includes(k))
+        .map(([k]) => k)
+        .join(',')
+    }
+    chars = mappedChars;
+  } 
+  chars = [...new Set(chars.join('').replace(/[\s\uFE26]+/g, '').split(''))].sort();
 
   return (
       <div className="flex flex-wrap gap-2 justify-center">
         {chars.map((char, index) => (
-          <InteractiveButton
+          <GridButton 
             key={`${char}-${index}`}
-            onClick={() => onCharacterInput(currentPreset?.id === 'cut_numbers' ? numberToLetter[char] : char)}
-            className="min-w-16 h-14 px-4 flex items-center justify-center
-                     bg-gradient-to-b from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600
-                     rounded-lg text-lg font-mono font-semibold transition-all duration-200
-                     shadow-lg hover:shadow-xl transform hover:scale-105
-                     focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+            onClick={() => onCharacterInput(char)}
           >
-            {currentPreset?.id === 'cut_numbers' ? `${char} (${numberToLetter[char]})` : char}
-          </InteractiveButton>
+            {char}
+            {currentPreset?.id === 'cut_numbers' && numberToLetter[char] && (
+              <span className="text-sm text-gray-400 ml-2">({numberToLetter[char]})</span>
+            )}
+          </GridButton>
         ))}
+        <GridButton key="backspace" onClick={() => onCharacterInput('\u232B')}>
+          {'\u232B'}
+        </GridButton>
       </div>
+  );
+};
+
+const GridButton = ({ children, onClick }) => {
+  return (
+    <InteractiveButton
+      onClick={onClick}
+      className="min-w-16 h-14 px-4 flex items-center justify-center
+                bg-gradient-to-b from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600
+                rounded-lg text-lg font-mono font-semibold transition-all duration-200
+                shadow-lg hover:shadow-xl transform hover:scale-105
+                focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+    >
+      {children}
+    </InteractiveButton>
   );
 };

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MorseUI from './MorseUI';
 import { morseAudio } from './MorseAudio';
 import { filterNoise } from './FilterNoiseGenerator';
-import { MorseSequences } from './MorseSequences';
+import { MorseSequences, SEQUENCE_PRESETS } from './MorseSequences';
 import { MorseSettings } from './MorseSettings';
 import { useCustomAlphabet } from './CustomAlphabetManager';
 import { PerformanceDataManager } from './PerformanceDataManager';
@@ -427,12 +427,17 @@ const MorseTrainer = () => {
       if (radioNoiseEnabled) filterNoise.stop();
       setIsPlaying(false);
 
-      const isCorrect = newInput === currentGroup;
+      let expectedGroup = currentGroup;
+      if (currentPreset.id === 'cut_numbers') {
+        expectedGroup = currentGroup.split('').map(c => SEQUENCE_PRESETS.CUT_NUMBERS.translation[c] || c).join('');
+      }
+
+      const isCorrect = newInput === expectedGroup;
       updatePerformanceData(isCorrect, currentLevel);
 
       if (isCorrect) {
         setScore(prev => ({ ...prev, correct: prev.correct + 1 }));
-        setHistory(prev => [...prev, { group: currentGroup, userInput: newInput, correct: true }]);
+        setHistory(prev => [...prev, { group: expectedGroup, userInput: newInput, correct: true }]);
 
         const newConsecutiveCorrect = consecutiveCorrect + 1;
         setConsecutiveCorrect(newConsecutiveCorrect);

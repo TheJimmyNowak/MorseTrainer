@@ -23,13 +23,15 @@ export const SEQUENCE_PRESETS = {
     id: 'cut_numbers',
     name: 'Cut Numbers',
     sequence: [
-      'T', 'A', 'U', 'V', '4', '5', '6', 'B', 'D', 'N',  // 1,2,3,4,5,6,7,8,9,0
-      'O' // Alternative zero
+      'T', 'N', 'A', 'E', // Most common 0,9,1,5
+      'O', // Alternative zero
+      'U', 'V', 'B', 'D', // Rare 2,3,7,8
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' // All numbers
     ],
     type: 'character',
     translation: {
-      'T': '1', 'A': '2', 'U': '3', 'V': '4', '4': '4',
-      '5': '5', '6': '6', 'B': '8', 'D': '9', 'N': '0',
+      'T': '0', 'A': '1', 'U': '2', 'V': '3',
+      'E': '5', 'B': '7', 'D': '8', 'N': '9',
       'O': '0'
     }
   },
