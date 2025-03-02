@@ -24,10 +24,10 @@ class MorseAudioManager {
     this.currentWpm = 20;
     this.farnsworthSpacing = 0;
 
-    // Repeat counter
-    this.repeatCount = 0;
-    this.maxRepeats = -1; // -1 means infinite repeats
-    this.onMaxRepeatsReached = null;
+    // Repeat counter - now tracks actual play count (not zero-indexed)
+    this.playCount = 0;
+    this.maxPlays = -1; // -1 means infinite plays
+    this.onMaxPlaysReached = null;
 
     // ADSR envelope settings
     this.attackTime = 0.005;
@@ -91,15 +91,15 @@ class MorseAudioManager {
     }
   }
 
-  setMaxRepeats(maxRepeats, callback) {
-    this.maxRepeats = maxRepeats;
-    this.onMaxRepeatsReached = callback;
-    console.log(`MorseAudio: Max repeats set to ${maxRepeats}`); // Debug log
+  setMaxRepeats(maxPlays, callback) {
+    this.maxPlays = maxPlays;
+    this.onMaxPlaysReached = callback;
+    console.log(`MorseAudio: Max plays set to ${maxPlays}`); // Debug log
   }
 
   resetRepeatCount() {
-    this.repeatCount = 0;
-    console.log('MorseAudio: Repeat count reset to 0'); // Debug log
+    this.playCount = 0;
+    console.log('MorseAudio: Play count reset to 0'); // Debug log
   }
 
   clearScheduledEvents() {
@@ -129,8 +129,8 @@ class MorseAudioManager {
     // Clear all scheduled events
     this.scheduledEvents.clear();
 
-    // Reset repeat count
-    this.repeatCount = 0;
+    // Reset play count
+    this.playCount = 0;
 
     // Efficiently stop and clean up audio nodes
     if (this.audioContext && this.masterGain) {
@@ -198,7 +198,7 @@ class MorseAudioManager {
     });
   }
 
-  async playSequence(chars, wpm, farnsworthSpacing = 0, levelSpacing = 2000, isFirstPlay = true) {
+  async playSequence(chars, wpm, farnsworthSpacing = 0, levelSpacing = 2000) {
     if (!this.isInitialized) {
       await this.initialize();
     }
@@ -206,8 +206,8 @@ class MorseAudioManager {
     // Ensure we're ready to play
     await this.ensureAudioContext();
 
-    // Only reset everything for the first play
-    if (isFirstPlay) {
+    // For the first call to playSequence, we reset everything
+    if (this.playCount === 0) {
       this.stopAll();
       this.currentSequence = chars;
       this.currentWpm = wpm;
@@ -215,11 +215,13 @@ class MorseAudioManager {
       this.abortController = new AbortController();
       this.isPlaying = true;
       this.combined = false;
-      this.repeatCount = 1; // Start at 1 for the first play
-      console.log(`MorseAudio: First play - count set to 1, Max repeats: ${this.maxRepeats}`);
     }
 
-    // Reset master gain node for new sequence
+    // Increment the play count right at the beginning
+    this.playCount++;
+    console.log(`MorseAudio: Playing sequence, play count = ${this.playCount}, max plays = ${this.maxPlays}`);
+
+    // Reset master gain node for this play
     const now = this.audioContext.currentTime;
     this.masterGain.gain.cancelScheduledValues(now);
     this.masterGain.gain.setValueAtTime(0, now);
@@ -278,30 +280,23 @@ class MorseAudioManager {
         }
       }
 
-      // Schedule replay if needed
+      // Schedule replay or check max plays
       if (this.isPlaying) {
         this.activeTimeout = setTimeout(() => {
           if (this.isPlaying) {
-            // Check if we've reached max repeats before incrementing
-            // We use >= here because we start count at 1
-            if (this.maxRepeats !== -1 && this.repeatCount >= this.maxRepeats) {
-              console.log(`MorseAudio: Max repeats reached (${this.maxRepeats}), count: ${this.repeatCount}`); // Debug log
-              if (this.onMaxRepeatsReached) {
-                // Call the callback when max repeats reached
+            // Check if we've reached max plays
+            if (this.maxPlays !== -1 && this.playCount >= this.maxPlays) {
+              console.log(`MorseAudio: Max plays reached (${this.maxPlays})`);
+              if (this.onMaxPlaysReached) {
+                // Call the callback when max plays reached
                 this.isPlaying = false; // Immediately mark as not playing
-                this.onMaxRepeatsReached();
-                return; // Do not schedule another repeat
+                this.onMaxPlaysReached();
+                return; // Do not schedule another play
               }
             }
             
-            // If this is not the first play, increment the repeat counter
-            if (!isFirstPlay) {
-              this.repeatCount++;
-              console.log(`MorseAudio: Play count incremented to: ${this.repeatCount}, Max repeats: ${this.maxRepeats}`); // Debug log
-            }
-            
-            // Continue playing the sequence (not the first play anymore)
-            this.playSequence(chars, wpm, farnsworthSpacing, levelSpacing, false);
+            // Continue playing the sequence
+            this.playSequence(chars, wpm, farnsworthSpacing, levelSpacing);
           }
         }, (currentTime - this.audioContext.currentTime) * 1000 + levelSpacing);
       }
@@ -316,7 +311,7 @@ class MorseAudioManager {
   }
 
   getRepeatCount() {
-    return this.repeatCount;
+    return this.playCount;
   }
 
   isActive() {
