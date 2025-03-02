@@ -1,4 +1,5 @@
 import { InteractiveButton } from './InteractiveButton';
+import { HelpTooltip } from './HelpTooltip';
 
 export const AudioControls = ({
   frequency,
@@ -22,7 +23,10 @@ export const AudioControls = ({
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="bg-gray-700/50 p-3 rounded-lg">
+        <div className="bg-gray-700/50 p-3 rounded-lg relative">
+          <HelpTooltip 
+            description="The frequency (pitch) of the Morse code tone in Hertz. Lower values create a deeper sound, higher values create a higher-pitched sound. Most operators use 400-800 Hz."
+          />
           <div className="text-xs text-gray-400 mb-2">Tone (Hz)</div>
           <div className="flex items-center gap-2">
             <InteractiveButton
@@ -39,7 +43,10 @@ export const AudioControls = ({
           </div>
         </div>
 
-        <div className="bg-gray-700/50 p-3 rounded-lg">
+        <div className="bg-gray-700/50 p-3 rounded-lg relative">
+          <HelpTooltip 
+            description="Speed at which individual characters are sent in Words Per Minute (WPM). Higher values create faster characters. When Progressive Speed Mode is enabled, this will automatically increase with level."
+          />
           <div className="text-xs text-gray-400 mb-2">
             Character Speed (WPM)
             {progressiveSpeedMode && (
@@ -63,7 +70,10 @@ export const AudioControls = ({
       </div>
 
       {/* Timing Controls */}
-      <div className="bg-gray-700/50 p-3 rounded-lg">
+      <div className="bg-gray-700/50 p-3 rounded-lg relative">
+        <HelpTooltip 
+          description="Time delay between repeat plays of the same Morse sequence in milliseconds. Longer times give you more thinking time between sequence plays."
+        />
         <div className="text-sm mb-2">Sequence Spacing</div>
         <div className="flex items-center gap-2">
           <InteractiveButton
@@ -90,7 +100,10 @@ export const AudioControls = ({
         </div>
       </div>
 
-      <div className="bg-gray-700/50 p-3 rounded-lg">
+      <div className="bg-gray-700/50 p-3 rounded-lg relative">
+        <HelpTooltip 
+          description="Delay before starting a new sequence after changes like level advancement or after entering an answer. Shorter delays create a faster training pace."
+        />
         <div className="text-sm mb-2">Transition Delay</div>
         <div className="flex items-center gap-2">
           <InteractiveButton
@@ -117,7 +130,10 @@ export const AudioControls = ({
         </div>
       </div>
 
-      <div className="bg-gray-700/50 p-3 rounded-lg">
+      <div className="bg-gray-700/50 p-3 rounded-lg relative">
+        <HelpTooltip 
+          description="Increases spacing between characters while maintaining character speed. This creates a slower effective WPM while preserving proper character rhythm, making it easier to recognize characters at higher speeds."
+        />
         <div className="text-sm mb-2">Farnsworth Spacing</div>
         <div className="flex items-center gap-2">
           <InteractiveButton

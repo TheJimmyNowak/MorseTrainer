@@ -1,5 +1,10 @@
-export const ModeToggle = ({ label, description, isActive, onToggle }) => (
-  <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/50 p-4">
+import { HelpTooltip } from './HelpTooltip';
+
+export const ModeToggle = ({ label, description, isActive, onToggle, tooltipText }) => (
+  <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/50 p-4 relative">
+    {tooltipText && (
+      <HelpTooltip description={tooltipText} />
+    )}
     <div className="flex flex-col gap-3">
       <div>
         <div className="text-base font-semibold text-gray-200">{label}</div>

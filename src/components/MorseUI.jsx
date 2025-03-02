@@ -190,12 +190,14 @@ const MorseUI = ({
                   description="Hide the text while practicing"
                   isActive={headCopyMode}
                   onToggle={onHeadCopyMode}
+                  tooltipText="Trains your ability to copy Morse in your head without visual aids. In this mode, you need to listen to the entire sequence before typing or revealing the answer."
                 />
                 <ModeToggle
                   label="Progressive Speed"
                   description="Speed increases automatically with level"
                   isActive={progressiveSpeedMode}
                   onToggle={onProgressiveSpeedToggle}
+                  tooltipText="Automatically increases the character speed (WPM) as you advance in levels. This helps you naturally progress to faster speeds as you become more proficient."
                 />
               </div>
               <ControlPanel
