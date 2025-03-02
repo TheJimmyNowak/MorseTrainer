@@ -84,6 +84,8 @@ const MorseUI = ({
   onRadioNoiseCrackleChange,
   filterBandwidth,
   onFilterBandwidthChange,
+  infiniteDelayEnabled,
+  onInfiniteDelayToggle,
   onClearPerformanceData
 }) => {
   const [mainButtonElement, setMainButtonElement] = useState(null);
@@ -198,6 +200,13 @@ const MorseUI = ({
                   isActive={progressiveSpeedMode}
                   onToggle={onProgressiveSpeedToggle}
                   tooltipText="Automatically increases the character speed (WPM) as you advance in levels. This helps you naturally progress to faster speeds as you become more proficient."
+                />
+                <ModeToggle
+                  label="Infinite Delay After Max Repeats"
+                  description="Give unlimited time to answer after max repeats"
+                  isActive={infiniteDelayEnabled}
+                  onToggle={onInfiniteDelayToggle}
+                  tooltipText="When enabled, the sequence will pause indefinitely after reaching maximum repeats, giving you unlimited time to provide an answer. When disabled, incorrect answer is marked automatically after max repeats."
                 />
               </div>
               <ControlPanel

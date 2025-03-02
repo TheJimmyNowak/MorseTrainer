@@ -45,7 +45,8 @@ const MorseTrainer = () => {
       radioNoiseAtmospheric: settings.radioNoiseAtmospheric || 0.5,
       radioNoiseCrackle: settings.radioNoiseCrackle || 0.05,
       farnsworthSpacing: settings.farnsworthSpacing || 0,
-      filterBandwidth: settings.filterBandwidth || 550
+      filterBandwidth: settings.filterBandwidth || 550,
+      infiniteDelayEnabled: settings.infiniteDelayEnabled || false
     };
   };
 
@@ -97,6 +98,7 @@ const MorseTrainer = () => {
   const [notification, setNotification] = useState('');
   const [isPaused, setIsPaused] = useState(false);
   const [farnsworthSpacing, setFarnsworthSpacing] = useState(savedSettings.farnsworthSpacing || 0);
+  const [infiniteDelayEnabled, setInfiniteDelayEnabled] = useState(savedSettings.infiniteDelayEnabled || false);
 
   const notificationTimeoutRef = useRef(null);
 
@@ -182,11 +184,20 @@ const MorseTrainer = () => {
   const handleMaxRepeatsReached = useCallback(() => {
     if (!isPlaying) return;
 
+    // Stop the audio
     morseAudio.stop();
     if (radioNoiseEnabled) filterNoise.stop();
 
-    setIsPlaying(false);
+    // If infinite delay is enabled, don't mark as incorrect but pause for user input
+    if (infiniteDelayEnabled) {
+      showNotification(`Max repeats (${maxRepeats}) reached - waiting for your answer`, 'yellow');
+      // Keep isPlaying true but put system in a "waiting" state
+      // The user can still type their answer
+      return;
+    }
 
+    // Otherwise, proceed with the original behavior - mark as incorrect
+    setIsPlaying(false);
     const emptyInput = "";
 
     updatePerformanceData(false, currentLevel);
@@ -208,7 +219,7 @@ const MorseTrainer = () => {
   }, [
     isPlaying, radioNoiseEnabled, currentLevel, currentGroup,
     maxRepeats, transitionDelay, showNotification,
-    updatePerformanceData, startNewGroup
+    updatePerformanceData, startNewGroup, infiniteDelayEnabled
   ]);
 
   useEffect(() => {
@@ -295,7 +306,8 @@ const MorseTrainer = () => {
       radioNoiseDrift,
       radioNoiseAtmospheric,
       radioNoiseCrackle,
-      filterBandwidth
+      filterBandwidth,
+      infiniteDelayEnabled
     });
   }, [
     currentLevel, wpm, frequency, farnsworthSpacing, groupSize, minGroupSize, maxRepeats,
@@ -305,6 +317,10 @@ const MorseTrainer = () => {
     radioNoiseEnabled, radioNoiseVolume, radioNoiseResonance, radioNoiseWarmth,
     radioNoiseDrift, radioNoiseAtmospheric, radioNoiseCrackle, filterBandwidth
   ]);
+
+  const handleInfiniteDelayToggle = () => {
+    setInfiniteDelayEnabled(prev => !prev);
+  };
 
   const handleProgressiveSpeedToggle = useCallback(() => {
     setProgressiveSpeedMode(prev => !prev);
@@ -741,6 +757,8 @@ const MorseTrainer = () => {
         onRadioNoiseCrackleChange={handleRadioNoiseCrackleChange}
         filterBandwidth={filterBandwidth}
         onFilterBandwidthChange={handleFilterBandwidthChange}
+        infiniteDelayEnabled={infiniteDelayEnabled}
+        onInfiniteDelayToggle={handleInfiniteDelayToggle}
         // Debug function - remove for production if desired
         onClearPerformanceData={clearPerformanceData}
       />
