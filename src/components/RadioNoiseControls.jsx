@@ -1,5 +1,6 @@
 import { InteractiveButton } from './InteractiveButton';
 import { useState } from 'react';
+import { HelpTooltip } from './HelpTooltip';
 
 export const FilterNoiseControls = ({
   isEnabled,
@@ -30,7 +31,10 @@ export const FilterNoiseControls = ({
 
   return (
     <div className="space-y-3 pb-1">
-      <div className="bg-gray-700/50 p-3 rounded-lg">
+      <div className="bg-gray-700/50 p-3 rounded-lg relative">
+        <HelpTooltip 
+          description="Simulates the sound of a radio receiver with band-pass filtering. Helps develop skills for real-world radio conditions."
+        />
         <div className="text-sm mb-2">Filter Noise</div>
         <div className="flex items-center gap-2">
           <InteractiveButton
@@ -46,7 +50,10 @@ export const FilterNoiseControls = ({
 
       {isEnabled && (
         <>
-          <div className="bg-gray-700/50 p-3 rounded-lg">
+          <div className="bg-gray-700/50 p-3 rounded-lg relative">
+            <HelpTooltip 
+              description="Controls the volume of background noise relative to the Morse code signal. Higher values create more challenging listening conditions."
+            />
             <div className="text-sm mb-2">Noise Volume (relative to CW tone)</div>
             <div className="flex items-center gap-2">
               <InteractiveButton
@@ -103,7 +110,10 @@ export const FilterNoiseControls = ({
             </div>
           </div>
 
-          <div className="bg-gray-700/50 p-3 rounded-lg">
+          <div className="bg-gray-700/50 p-3 rounded-lg relative">
+            <HelpTooltip 
+              description="Adjusts the sharpness of the filter. Higher values create a more narrowband sound with pronounced ringing, similar to CW filters in radio receivers."
+            />
             <div className="text-sm mb-2">Filter Resonance</div>
             <div className="flex items-center gap-2">
               <InteractiveButton
@@ -137,7 +147,10 @@ export const FilterNoiseControls = ({
             </div>
           </div>
 
-          <div className="bg-gray-700/50 p-3 rounded-lg">
+          <div className="bg-gray-700/50 p-3 rounded-lg relative">
+            <HelpTooltip 
+              description="Adds mid-frequency emphasis to simulate the warm tone of vintage radio equipment. Higher values create a more 'tube-like' sound."
+            />
             <div className="text-sm mb-2">Warmth</div>
             <div className="flex items-center gap-2">
               <InteractiveButton
@@ -171,7 +184,10 @@ export const FilterNoiseControls = ({
             </div>
           </div>
 
-          <div className="bg-gray-700/50 p-3 rounded-lg">
+          <div className="bg-gray-700/50 p-3 rounded-lg relative">
+            <HelpTooltip 
+              description="Simulates radio drift where the receive frequency slowly changes. Higher values create more pronounced and faster frequency variations."
+            />
             <div className="text-sm mb-2">Frequency Drift</div>
             <div className="flex items-center gap-2">
               <InteractiveButton
@@ -206,7 +222,10 @@ export const FilterNoiseControls = ({
             </div>
           </div>
 
-          <div className="bg-gray-700/50 p-3 rounded-lg">
+          <div className="bg-gray-700/50 p-3 rounded-lg relative">
+            <HelpTooltip 
+              description="Simulates ionospheric effects that cause signal modulation and fading. High values recreate challenging conditions like aurora or sporadic-E propagation."
+            />
             <div className="text-sm mb-2">Atmospheric Effects</div>
             <div className="flex items-center gap-2">
               <InteractiveButton
@@ -246,7 +265,10 @@ export const FilterNoiseControls = ({
             </div>
           </div>
 
-          <div className="bg-gray-700/50 p-3 rounded-lg">
+          <div className="bg-gray-700/50 p-3 rounded-lg relative">
+            <HelpTooltip 
+              description="Adds random pops and static to simulate electrical interference and atmospheric noise, like thunderstorms or power line noise."
+            />
             <div className="text-sm mb-2">Static & Crackle</div>
             <div className="flex items-center gap-2">
               <InteractiveButton

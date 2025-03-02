@@ -16,9 +16,10 @@ import { FloatingNotification } from './Notification';
 import { MainButton } from './MainButton';
 import { ModeToggle } from './ModeToggle';
 import { SidePanel } from './SidePanel';
-import { RepeatControls } from './RepeatControls'; // Import our new component
+import { RepeatControls } from './RepeatControls';
 import { useState } from 'react';
 import { BetaBanner } from './BetaBanner';
+import { HelpTooltip } from './HelpTooltip';
 
 const MorseUI = ({
   isPlaying,
@@ -207,13 +208,13 @@ const MorseUI = ({
                 onAdvanceThresholdChange={onAdvanceThresholdChange}
                 consecutiveCorrect={consecutiveCorrect}
               />
-              
+
               {/* Modified RepeatControls component without min group size */}
               <RepeatControls
                 maxRepeats={maxRepeats}
                 onMaxRepeatsChange={onMaxRepeatsChange}
               />
-              
+
               <AvailableChars
                 availableChars={availableChars}
                 consecutiveCorrect={consecutiveCorrect}
@@ -256,8 +257,10 @@ const MorseUI = ({
                 onCrackleIntensityChange={onRadioNoiseCrackleChange}
               />
 
-              {/* Keep QSB controls as they simulate a different effect (signal fading) */}
-              <div className="bg-gray-700/50 p-3 rounded-lg">
+              <div className="bg-gray-700/50 p-3 rounded-lg relative">
+                <HelpTooltip
+                  description="Simulates signal fading (QSB) that occurs with long-distance radio communications. Higher values cause the Morse signal to randomly fade in and out, making copy more challenging."
+                />
                 <div className="text-sm mb-2">Signal Fading (QSB)</div>
                 <div className="flex items-center gap-2">
                   <InteractiveButton
