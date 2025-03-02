@@ -200,16 +200,16 @@ const MorseUI = ({
                 onLevelChange={onLevelChange}
                 groupSize={groupSize}
                 onGroupSizeChange={onGroupSizeChange}
+                minGroupSize={minGroupSize}
+                onMinGroupSizeChange={onMinGroupSizeChange}
                 maxLevel={maxLevel}
                 advanceThreshold={advanceThreshold}
                 onAdvanceThresholdChange={onAdvanceThresholdChange}
                 consecutiveCorrect={consecutiveCorrect}
               />
               
-              {/* Add the new RepeatControls component */}
+              {/* Modified RepeatControls component without min group size */}
               <RepeatControls
-                minGroupSize={minGroupSize}
-                onMinGroupSizeChange={onMinGroupSizeChange}
                 maxRepeats={maxRepeats}
                 onMaxRepeatsChange={onMaxRepeatsChange}
               />
