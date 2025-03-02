@@ -17,6 +17,7 @@ class FilterNoiseGenerator {
     this.params = {
       filterResonance: 25,      // Q factor (resonance) of bandpass filter
       filterFrequency: 600,     // Center frequency of the bandpass filter (Hz)
+      filterBandwidth: 550,     // Bandwidth of the filter in Hz (new parameter)
       resonanceJump: 0.8,       // Random Q jumps intensity
       warmth: 8,                // Low-mid frequency boost (dB)
       atmosphericIntensity: 0.5, // Atmospheric noise modulation
@@ -77,6 +78,16 @@ class FilterNoiseGenerator {
         case 'filterFrequency':
           this.filterChain.bandpass1.frequency.value = value;
           this.filterChain.bandpass2.frequency.value = value + 30;
+          break;
+        case 'filterBandwidth':
+          // Update the filter bandwidth by adjusting the Q value
+          // Q = centerFreq / bandwidth
+          if (value > 0) { // Prevent division by zero
+            const q1 = this.params.filterFrequency / value;
+            const q2 = (this.params.filterFrequency + 30) / value;
+            this.filterChain.bandpass1.Q.value = q1;
+            this.filterChain.bandpass2.Q.value = q2 * 0.8;
+          }
           break;
         case 'warmth':
           this.filterChain.peaking1.gain.value = value;
@@ -196,8 +207,8 @@ class FilterNoiseGenerator {
       }
     }, duration * 1000 + 50); // Full duration plus a small safety margin
   }
-  
-  setupIonosphericFading(intensity) {
+
+setupIonosphericFading(intensity) {
     // Clear existing fading interval
     if (this.fadingInterval) {
       clearInterval(this.fadingInterval);
@@ -242,13 +253,21 @@ class FilterNoiseGenerator {
     const bandpass1 = this.audioContext.createBiquadFilter();
     bandpass1.type = 'bandpass';
     bandpass1.frequency.value = this.params.filterFrequency;
-    bandpass1.Q.value = this.params.filterResonance;
+    
+    // Calculate Q based on filter bandwidth (Q = centerFreq / bandwidth)
+    // Use a minimum bandwidth of 50Hz to prevent extreme Q values
+    const bandwidth = Math.max(50, this.params.filterBandwidth);
+    const q1 = this.params.filterFrequency / bandwidth;
+    bandpass1.Q.value = q1;
 
     // Secondary bandpass for complexity
     const bandpass2 = this.audioContext.createBiquadFilter();
     bandpass2.type = 'bandpass';
     bandpass2.frequency.value = this.params.filterFrequency + 30;
-    bandpass2.Q.value = this.params.filterResonance * 0.8;
+    
+    // Calculate Q for the second filter
+    const q2 = (this.params.filterFrequency + 30) / bandwidth;
+    bandpass2.Q.value = q2 * 0.8;
 
     // Warmth control (midrange emphasis)
     const peaking1 = this.audioContext.createBiquadFilter();
@@ -288,7 +307,7 @@ class FilterNoiseGenerator {
       if (this.isPlaying && this.filterChain) {
         // Randomly apply filter resonance jumps to simulate instability
         if (Math.random() < 0.15) {
-          const baseQ = this.params.filterResonance;
+          const baseQ = this.params.filterFrequency / this.params.filterBandwidth;
           const jumpAmount = (Math.random() * 15 - 7.5) * this.params.resonanceJump;
           
           this.filterChain.bandpass1.Q.setValueAtTime(
@@ -350,7 +369,7 @@ class FilterNoiseGenerator {
         // For high atmospheric intensity, add more randomness to the Q as well
         if (this.params.atmosphericIntensity > 1.0) {
           const qVariation = Math.random() * 15 * (this.params.atmosphericIntensity - 1.0); // Increased from 10 to 15
-          const baseQ = this.params.filterResonance;
+          const baseQ = this.params.filterFrequency / this.params.filterBandwidth;
           
           this.filterChain.bandpass1.Q.cancelScheduledValues(now);
           this.filterChain.bandpass2.Q.cancelScheduledValues(now);

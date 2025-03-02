@@ -44,7 +44,8 @@ const MorseTrainer = () => {
       radioNoiseDrift: settings.radioNoiseDrift || 0.5,
       radioNoiseAtmospheric: settings.radioNoiseAtmospheric || 0.5,
       radioNoiseCrackle: settings.radioNoiseCrackle || 0.05,
-      farnsworthSpacing: settings.farnsworthSpacing || 0
+      farnsworthSpacing: settings.farnsworthSpacing || 0,
+      filterBandwidth: settings.filterBandwidth || 550
     };
   };
 
@@ -72,6 +73,8 @@ const MorseTrainer = () => {
   const [radioNoiseDrift, setRadioNoiseDrift] = useState(savedSettings.radioNoiseDrift);
   const [radioNoiseAtmospheric, setRadioNoiseAtmospheric] = useState(savedSettings.radioNoiseAtmospheric);
   const [radioNoiseCrackle, setRadioNoiseCrackle] = useState(savedSettings.radioNoiseCrackle);
+  // New state for filter bandwidth
+  const [filterBandwidth, setFilterBandwidth] = useState(savedSettings.filterBandwidth || 550);
 
   // Keep QSB
   const [qsbAmount, setQsbAmount] = useState(savedSettings.qsbAmount || 0);
@@ -291,7 +294,8 @@ const MorseTrainer = () => {
       radioNoiseWarmth,
       radioNoiseDrift,
       radioNoiseAtmospheric,
-      radioNoiseCrackle
+      radioNoiseCrackle,
+      filterBandwidth
     });
   }, [
     currentLevel, wpm, frequency, farnsworthSpacing, groupSize, minGroupSize, maxRepeats,
@@ -299,7 +303,7 @@ const MorseTrainer = () => {
     levelSpacing, transitionDelay,
     // Include filter noise settings
     radioNoiseEnabled, radioNoiseVolume, radioNoiseResonance, radioNoiseWarmth,
-    radioNoiseDrift, radioNoiseAtmospheric, radioNoiseCrackle
+    radioNoiseDrift, radioNoiseAtmospheric, radioNoiseCrackle, filterBandwidth
   ]);
 
   const handleProgressiveSpeedToggle = useCallback(() => {
@@ -333,6 +337,13 @@ const MorseTrainer = () => {
       }
     }
   }, [progressiveSpeedMode, wpm, currentLevel, isPlaying, startNewGroup, showNotification, transitionDelay, radioNoiseEnabled]);
+
+  // Filter bandwidth handler
+  const handleFilterBandwidthChange = (delta) => {
+    const newValue = Math.max(50, Math.min(800, filterBandwidth + delta));
+    setFilterBandwidth(newValue);
+    filterNoise.updateParameter('filterBandwidth', newValue);
+  };
 
   const handleLevelChange = (delta) => {
     const newLevel = Math.max(1, Math.min(morseRef.current.getMaxLevel(), currentLevel + delta));
@@ -728,6 +739,8 @@ const MorseTrainer = () => {
         onRadioNoiseAtmosphericChange={handleRadioNoiseAtmosphericChange}
         radioNoiseCrackle={radioNoiseCrackle}
         onRadioNoiseCrackleChange={handleRadioNoiseCrackleChange}
+        filterBandwidth={filterBandwidth}
+        onFilterBandwidthChange={handleFilterBandwidthChange}
         // Debug function - remove for production if desired
         onClearPerformanceData={clearPerformanceData}
       />

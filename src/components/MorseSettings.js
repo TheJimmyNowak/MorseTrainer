@@ -25,7 +25,8 @@ export class MorseSettings {
       radioNoiseWarmth: 8,
       radioNoiseDrift: 0.5,
       radioNoiseAtmospheric: 0.5,
-      radioNoiseCrackle: 0.05
+      radioNoiseCrackle: 0.05,
+      filterBandwidth: 550     // New setting for filter bandwidth (default: 550Hz)
     };
   }
 

@@ -82,6 +82,8 @@ const MorseUI = ({
   onRadioNoiseAtmosphericChange,
   radioNoiseCrackle,
   onRadioNoiseCrackleChange,
+  filterBandwidth,
+  onFilterBandwidthChange,
   onClearPerformanceData
 }) => {
   const [mainButtonElement, setMainButtonElement] = useState(null);
@@ -255,6 +257,8 @@ const MorseUI = ({
                 onAtmosphericNoiseChange={onRadioNoiseAtmosphericChange}
                 crackleIntensity={radioNoiseCrackle}
                 onCrackleIntensityChange={onRadioNoiseCrackleChange}
+                filterBandwidth={filterBandwidth}
+                onFilterBandwidthChange={onFilterBandwidthChange}
               />
 
               <div className="bg-gray-700/50 p-3 rounded-lg relative">

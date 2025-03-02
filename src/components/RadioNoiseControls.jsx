@@ -16,7 +16,10 @@ export const FilterNoiseControls = ({
   atmosphericNoise,
   onAtmosphericNoiseChange,
   crackleIntensity,
-  onCrackleIntensityChange
+  onCrackleIntensityChange,
+  // New prop for filter bandwidth
+  filterBandwidth,
+  onFilterBandwidthChange
 }) => {
   // Local state to track slider values
   const [volumeValue, setVolumeValue] = useState(volume * 100);
@@ -106,6 +109,49 @@ export const FilterNoiseControls = ({
                 }}
                 className="w-10 h-10 rounded bg-gray-600"
                 disabled={volume >= 5.0}
+              >+</InteractiveButton>
+            </div>
+          </div>
+
+          {/* New Filter Bandwidth Control */}
+          <div className="bg-gray-700/50 p-3 rounded-lg relative">
+            <HelpTooltip 
+              description="Controls the bandwidth of the CW filter. Narrow bandwidth (50-200Hz) creates sharper filtering but may cause ringing. Wide bandwidth (>500Hz) sounds more natural but lets in more noise."
+            />
+            <div className="text-sm mb-2">Filter Bandwidth (Hz)</div>
+            <div className="flex items-center gap-2">
+              <InteractiveButton
+                onClick={() => onFilterBandwidthChange(-50)}
+                className="w-10 h-10 rounded bg-gray-600"
+                disabled={filterBandwidth <= 50}
+              >-</InteractiveButton>
+              <div className="flex-1">
+                <input 
+                  type="range" 
+                  min="50" 
+                  max="800" 
+                  step="50"
+                  value={filterBandwidth} 
+                  onChange={(e) => onFilterBandwidthChange(parseInt(e.target.value) - filterBandwidth)}
+                  className="w-full h-2 bg-gray-600 rounded-full appearance-none cursor-pointer mb-2"
+                  style={{ 'accentColor': '#EC4899' }}
+                />
+                <div className="w-full bg-gray-600 rounded-full h-2">
+                  <div
+                    className="bg-pink-500 h-2 rounded-full transition-all duration-200"
+                    style={{ width: `${(filterBandwidth / 800) * 100}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <div>Narrow</div>
+                  <div className="text-center">{filterBandwidth} Hz</div>
+                  <div>Wide</div>
+                </div>
+              </div>
+              <InteractiveButton
+                onClick={() => onFilterBandwidthChange(50)}
+                className="w-10 h-10 rounded bg-gray-600"
+                disabled={filterBandwidth >= 800}
               >+</InteractiveButton>
             </div>
           </div>
