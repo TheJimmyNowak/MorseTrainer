@@ -44,6 +44,21 @@ export const SEQUENCE_PRESETS = {
       'POTA', 'SOTA', 'TU', 'GM', 'GA', 'GE', 'B\uFE26K', '5NN', 'B\uFE26T', 'S\uFE26K', 'A\uFE26R', 'A\uFE26S'
     ],
     type: 'phrase'
+  },
+  US_VE_STATES: {
+    id: 'us_ve_states',
+    name: 'US States & VE Provinces',
+    sequence: [
+      'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL',
+      'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME',
+      'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH',
+      'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI',
+      'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI',
+      'WY',
+      'AB', 'BC', 'LB', 'MB', 'NB', 'NF', 'NS', 'NT', 'NU', 'ON',
+      'PE', 'QC', 'SK', 'YT'
+    ],
+    type: 'phrase'
   }
 };
 
