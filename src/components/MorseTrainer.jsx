@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MorseUI from './MorseUI';
+import { MorseRunnerController } from './MorseRunnerController';
 import { morseAudio } from './MorseAudio';
 import { filterNoise } from './FilterNoiseGenerator';
 import { MorseSequences, SEQUENCE_PRESETS } from './MorseSequences';
@@ -46,7 +47,9 @@ const MorseTrainer = () => {
       radioNoiseCrackle: settings.radioNoiseCrackle || 0.05,
       farnsworthSpacing: settings.farnsworthSpacing || 0,
       filterBandwidth: settings.filterBandwidth || 550,
-      infiniteDelayEnabled: settings.infiniteDelayEnabled || false
+      infiniteDelayEnabled: settings.infiniteDelayEnabled || false,
+      // New setting for mode
+      activeModeTab: settings.activeModeTab || 'trainer'
     };
   };
 
@@ -74,11 +77,13 @@ const MorseTrainer = () => {
   const [radioNoiseDrift, setRadioNoiseDrift] = useState(savedSettings.radioNoiseDrift);
   const [radioNoiseAtmospheric, setRadioNoiseAtmospheric] = useState(savedSettings.radioNoiseAtmospheric);
   const [radioNoiseCrackle, setRadioNoiseCrackle] = useState(savedSettings.radioNoiseCrackle);
-  // New state for filter bandwidth
   const [filterBandwidth, setFilterBandwidth] = useState(savedSettings.filterBandwidth || 550);
 
   // Keep QSB
   const [qsbAmount, setQsbAmount] = useState(savedSettings.qsbAmount || 0);
+
+  // New state for active mode tab
+  const [activeModeTab, setActiveModeTab] = useState(savedSettings.activeModeTab || 'trainer');
 
   const [currentGroupSize, setCurrentGroupSize] = useState(0);
   const [userInput, setUserInput] = useState('');
@@ -307,12 +312,14 @@ const MorseTrainer = () => {
       radioNoiseAtmospheric,
       radioNoiseCrackle,
       filterBandwidth,
-      infiniteDelayEnabled
+      infiniteDelayEnabled,
+      // Save active mode tab
+      activeModeTab
     });
   }, [
     currentLevel, wpm, frequency, farnsworthSpacing, groupSize, minGroupSize, maxRepeats,
     advanceThreshold, headCopyMode, hideChars, qsbAmount, currentPreset, progressiveSpeedMode,
-    levelSpacing, transitionDelay,
+    levelSpacing, transitionDelay, activeModeTab,
     // Include filter noise settings
     radioNoiseEnabled, radioNoiseVolume, radioNoiseResonance, radioNoiseWarmth,
     radioNoiseDrift, radioNoiseAtmospheric, radioNoiseCrackle, filterBandwidth
@@ -665,6 +672,18 @@ const MorseTrainer = () => {
     setAdvanceThreshold(newThreshold);
   };
 
+  const handleTabChange = (tab) => {
+
+    if (activeModeTab === 'trainer' && tab !== 'trainer' && isPlaying) {
+      handleTogglePlay();
+    }
+    if (activeModeTab === 'runner' && tab !== 'runner') {
+      morseAudio.stop();
+      if (radioNoiseEnabled) filterNoise.stop();
+    }
+    setActiveModeTab(tab);
+  };
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden && isPlaying) {
@@ -693,80 +712,130 @@ const MorseTrainer = () => {
     showNotification('Performance data cleared', 'red', 2000);
   };
 
+  // Mode tab selection UI
+  const ModeSelector = () => (
+    <div className="max-w-7xl mx-auto px-4 pt-16 pb-4">
+      <div className="flex border-b border-gray-700 mb-6">
+        <button
+          className={`px-4 py-2 font-medium rounded-t-lg transition-colors ${
+            activeModeTab === 'trainer'
+              ? 'bg-gray-800 text-blue-400 border-t border-l border-r border-gray-700'
+              : 'text-gray-400 hover:text-white'
+          }`}
+          onClick={() => handleTabChange('trainer')}
+        >
+          Morse Trainer
+        </button>
+        <button
+          className={`px-4 py-2 font-medium rounded-t-lg transition-colors ${
+            activeModeTab === 'runner'
+              ? 'bg-gray-800 text-blue-400 border-t border-l border-r border-gray-700'
+              : 'text-gray-400 hover:text-white'
+          }`}
+          onClick={() => handleTabChange('runner')}
+        >
+          Contest Runner
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <>
-      <MorseUI
-        isPlaying={isPlaying}
-        onTogglePlay={handleTogglePlay}
-        currentLevel={currentLevel}
-        onLevelChange={handleLevelChange}
-        groupSize={groupSize}
-        onGroupSizeChange={handleGroupSizeChange}
-        // New min group size and max repeats
-        minGroupSize={minGroupSize}
-        onMinGroupSizeChange={handleMinGroupSizeChange}
-        maxRepeats={maxRepeats}
-        onMaxRepeatsChange={handleMaxRepeatsChange}
-        frequency={frequency}
-        onFrequencyChange={handleFrequencyChange}
-        wpm={wpm}
-        onWpmChange={handleWpmChange}
-        availableChars={morseRef.current.getAvailableChars(currentLevel)}
-        consecutiveCorrect={consecutiveCorrect}
-        userInput={userInput}
-        currentGroupSize={currentGroupSize}
-        score={score}
-        history={history}
-        maxLevel={morseRef.current.getMaxLevel()}
-        notification={notification}
-        onCharacterInput={handleCharacterInput}
-        performanceData={performanceData}
-        headCopyMode={headCopyMode}
-        onHeadCopyMode={handleHeadCopyMode}
-        hideChars={hideChars}
-        onHideChars={handleHideChars}
-        showAnswer={showAnswer}
-        onShowAnswer={handleShowAnswer}
-        currentGroup={headCopyMode && !showAnswer ? '' : currentGroup}
-        qsbAmount={qsbAmount}
-        onQsbChange={handleQsbChange}
-        presets={morseRef.current.getPresets()}
-        currentPreset={currentPreset}
-        onPresetChange={handlePresetChange}
-        advanceThreshold={advanceThreshold}
-        onAdvanceThresholdChange={handleAdvanceThresholdChange}
-        farnsworthSpacing={farnsworthSpacing}
-        onFarnsworthChange={handleFarnsworthChange}
-        progressiveSpeedMode={progressiveSpeedMode}
-        onProgressiveSpeedToggle={handleProgressiveSpeedToggle}
-        onCustomizeClick={() => setIsModalOpen(true)}
-        customSequence={customSequence}
-        levelSpacing={levelSpacing}
-        onLevelSpacingChange={handleLevelSpacingChange}
-        transitionDelay={transitionDelay}
-        onTransitionDelayChange={handleTransitionDelayChange}
-        // Filter noise parameters
-        radioNoiseEnabled={radioNoiseEnabled}
-        onRadioNoiseToggle={handleRadioNoiseToggle}
-        radioNoiseVolume={radioNoiseVolume}
-        onRadioNoiseVolumeChange={handleRadioNoiseVolumeChange}
-        radioNoiseResonance={radioNoiseResonance}
-        onRadioNoiseResonanceChange={handleRadioNoiseResonanceChange}
-        radioNoiseWarmth={radioNoiseWarmth}
-        onRadioNoiseWarmthChange={handleRadioNoiseWarmthChange}
-        radioNoiseDrift={radioNoiseDrift}
-        onRadioNoiseDriftChange={handleRadioNoiseDriftChange}
-        radioNoiseAtmospheric={radioNoiseAtmospheric}
-        onRadioNoiseAtmosphericChange={handleRadioNoiseAtmosphericChange}
-        radioNoiseCrackle={radioNoiseCrackle}
-        onRadioNoiseCrackleChange={handleRadioNoiseCrackleChange}
-        filterBandwidth={filterBandwidth}
-        onFilterBandwidthChange={handleFilterBandwidthChange}
-        infiniteDelayEnabled={infiniteDelayEnabled}
-        onInfiniteDelayToggle={handleInfiniteDelayToggle}
-        // Debug function - remove for production if desired
-        onClearPerformanceData={clearPerformanceData}
-      />
+      <ModeSelector />
+
+      {activeModeTab === 'trainer' ? (
+        <MorseUI
+          isPlaying={isPlaying}
+          onTogglePlay={handleTogglePlay}
+          currentLevel={currentLevel}
+          onLevelChange={handleLevelChange}
+          groupSize={groupSize}
+          onGroupSizeChange={handleGroupSizeChange}
+          // New min group size and max repeats
+          minGroupSize={minGroupSize}
+          onMinGroupSizeChange={handleMinGroupSizeChange}
+          maxRepeats={maxRepeats}
+          onMaxRepeatsChange={handleMaxRepeatsChange}
+          frequency={frequency}
+          onFrequencyChange={handleFrequencyChange}
+          wpm={wpm}
+          onWpmChange={handleWpmChange}
+          availableChars={morseRef.current.getAvailableChars(currentLevel)}
+          consecutiveCorrect={consecutiveCorrect}
+          userInput={userInput}
+          currentGroupSize={currentGroupSize}
+          score={score}
+          history={history}
+          maxLevel={morseRef.current.getMaxLevel()}
+          notification={notification}
+          onCharacterInput={handleCharacterInput}
+          performanceData={performanceData}
+          headCopyMode={headCopyMode}
+          onHeadCopyMode={handleHeadCopyMode}
+          hideChars={hideChars}
+          onHideChars={handleHideChars}
+          showAnswer={showAnswer}
+          onShowAnswer={handleShowAnswer}
+          currentGroup={headCopyMode && !showAnswer ? '' : currentGroup}
+          qsbAmount={qsbAmount}
+          onQsbChange={handleQsbChange}
+          presets={morseRef.current.getPresets()}
+          currentPreset={currentPreset}
+          onPresetChange={handlePresetChange}
+          advanceThreshold={advanceThreshold}
+          onAdvanceThresholdChange={handleAdvanceThresholdChange}
+          farnsworthSpacing={farnsworthSpacing}
+          onFarnsworthChange={handleFarnsworthChange}
+          progressiveSpeedMode={progressiveSpeedMode}
+          onProgressiveSpeedToggle={handleProgressiveSpeedToggle}
+          onCustomizeClick={() => setIsModalOpen(true)}
+          customSequence={customSequence}
+          levelSpacing={levelSpacing}
+          onLevelSpacingChange={handleLevelSpacingChange}
+          transitionDelay={transitionDelay}
+          onTransitionDelayChange={handleTransitionDelayChange}
+          // Filter noise parameters
+          radioNoiseEnabled={radioNoiseEnabled}
+          onRadioNoiseToggle={handleRadioNoiseToggle}
+          radioNoiseVolume={radioNoiseVolume}
+          onRadioNoiseVolumeChange={handleRadioNoiseVolumeChange}
+          radioNoiseResonance={radioNoiseResonance}
+          onRadioNoiseResonanceChange={handleRadioNoiseResonanceChange}
+          radioNoiseWarmth={radioNoiseWarmth}
+          onRadioNoiseWarmthChange={handleRadioNoiseWarmthChange}
+          radioNoiseDrift={radioNoiseDrift}
+          onRadioNoiseDriftChange={handleRadioNoiseDriftChange}
+          radioNoiseAtmospheric={radioNoiseAtmospheric}
+          onRadioNoiseAtmosphericChange={handleRadioNoiseAtmosphericChange}
+          radioNoiseCrackle={radioNoiseCrackle}
+          onRadioNoiseCrackleChange={handleRadioNoiseCrackleChange}
+          filterBandwidth={filterBandwidth}
+          onFilterBandwidthChange={handleFilterBandwidthChange}
+          infiniteDelayEnabled={infiniteDelayEnabled}
+          onInfiniteDelayToggle={handleInfiniteDelayToggle}
+          // Debug function - remove for production if desired
+          onClearPerformanceData={clearPerformanceData}
+        />
+      ) : (
+        <div className="max-w-7xl mx-auto px-4 pb-16">
+          <MorseRunnerController
+            wpm={wpm}
+            qsbAmount={qsbAmount}
+            farnsworthSpacing={farnsworthSpacing}
+            frequency={frequency}
+            filterNoiseEnabled={radioNoiseEnabled}
+            onFilterNoiseToggle={handleRadioNoiseToggle}
+            radioNoiseVolume={radioNoiseVolume}
+            radioNoiseResonance={radioNoiseResonance}
+            radioNoiseWarmth={radioNoiseWarmth}
+            radioNoiseDrift={radioNoiseDrift}
+            radioNoiseAtmospheric={radioNoiseAtmospheric}
+            radioNoiseCrackle={radioNoiseCrackle}
+            filterBandwidth={filterBandwidth}
+          />
+        </div>
+      )}
 
       <CustomAlphabetModal
         isOpen={isModalOpen}
