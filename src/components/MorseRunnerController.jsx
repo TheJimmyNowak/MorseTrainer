@@ -4,11 +4,11 @@ import {
   Settings, 
   Radio, 
   AlertTriangle, 
-  PlayCircle, 
-  PauseCircle,
   Info, 
-  ToggleLeft,
-  ToggleRight
+  Award,
+  Zap,
+  Headphones,
+  Volume2
 } from 'lucide-react';
 import { AnimatedSection } from './AnimatedSection';
 import { InteractiveButton } from './InteractiveButton';
@@ -33,9 +33,9 @@ export const MorseRunnerController = ({
   filterBandwidth,
   morseSettings = {} // Optional settings from main application
 }) => {
-  const [showRunner, setShowRunner] = useState(false);
   const [runnerMode, setRunnerMode] = useState('normal'); // 'normal', 'pileup', 'practice'
   const [isRunnerActive, setIsRunnerActive] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   
   // Ref to track if component is mounted
   const isMountedRef = useRef(true);
@@ -83,156 +83,163 @@ export const MorseRunnerController = ({
     setIsRunnerActive(isRunning);
   };
   
-  // Handle hide/show runner toggle
-  const toggleShowRunner = () => {
-    if (showRunner && isRunnerActive) {
-      // If we're hiding the runner and it's active, stop all audio
-      stopAllAudio();
-    }
-    setShowRunner(!showRunner);
-  };
-  
   return (
     <div className="space-y-6">
-      <AnimatedSection title="Morse Contest Runner" icon={Radio} defaultOpen={true}>
-        <div className="text-gray-300 mb-4">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <div className="flex-1">
-              <h3 className="text-lg font-medium text-white mb-1">Contest Simulation</h3>
-              <p className="text-sm">Practice real-world CW contest operation with realistic callsigns and exchanges.</p>
-            </div>
-            
-            <div className="flex items-center gap-2 bg-gray-800/70 px-3 py-2 rounded-lg border border-red-500/30 text-red-300 text-xs">
-              <AlertTriangle size={16} className="text-red-400 flex-shrink-0" />
-              <span>Alpha Feature</span>
-            </div>
-          </div>
-        </div>
+      {/* Contest Mode Header */}
+      <div className="relative bg-gradient-to-r from-gray-900/80 via-blue-900/20 to-gray-900/80 rounded-xl p-4 pb-5 border border-gray-700/50 shadow-lg overflow-hidden">
+        <div className="absolute inset-0 bg-pattern opacity-5"></div>
         
-        <div className="bg-gray-800/40 p-4 rounded-lg border border-gray-700/50 mb-4">
-          <div className="flex flex-col sm:flex-row gap-4 items-stretch">
-            <div className="flex-1">
-              <div className="mb-3">
-                <div className="text-sm text-gray-300 mb-1">Runner Mode</div>
-                <select
-                  value={runnerMode}
-                  onChange={(e) => setRunnerMode(e.target.value)}
-                  className="w-full p-3 bg-gray-700 rounded border border-gray-600 text-white"
-                >
-                  <option value="normal">Standard Contest</option>
-                  <option value="pileup">Pileup Training</option>
-                  <option value="practice">Practice Mode</option>
-                </select>
-              </div>
-              
-              <div className="text-xs text-gray-400">
-                {runnerMode === 'normal' ? 
-                  'Standard contest mode with individual station contacts.' : 
-                 runnerMode === 'pileup' ?
-                  'Simulates multiple stations calling at once - coming soon!' :
-                  'Practice mode for learning contest exchanges - coming soon!'}
-              </div>
+        <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-3">
+          <div className="flex-1">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 text-transparent bg-clip-text flex items-center">
+              <Radio size={22} className="text-blue-400 mr-2" />
+              Contest Simulation
+            </h2>
+            <p className="text-gray-400 text-sm mt-1">
+              Practice real-world CW contest operation with realistic callsigns and exchanges
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="bg-red-900/20 border border-red-500/30 rounded-full px-3 py-1 flex items-center text-xs font-medium text-red-300">
+              <AlertTriangle size={14} className="mr-1" />
+              ALPHA
             </div>
             
-            <div className="flex flex-col justify-center">
-              <InteractiveButton
-                onClick={toggleShowRunner}
-                className={`h-full py-4 px-6 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${
-                  showRunner 
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                    : 'bg-gray-700 hover:bg-gray-600 text-white'
+            <div className="hidden sm:flex relative">
+              <button 
+                onClick={() => setShowHelp(!showHelp)}
+                className={`p-2 rounded-full transition-colors ${
+                  showHelp ? 'bg-blue-500 text-white' : 'bg-gray-700/80 text-gray-300 hover:bg-gray-600'
                 }`}
               >
-                {showRunner ? 
-                  <><PauseCircle size={20} /> Hide Runner</> : 
-                  <><PlayCircle size={20} /> Show Runner</>}
-              </InteractiveButton>
+                <Info size={20} />
+              </button>
             </div>
           </div>
         </div>
         
-        {/* Feature Highlights */}
-        {!showRunner && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-            <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/40">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-1.5 rounded-md bg-blue-500/20">
-                  <Radio size={16} className="text-blue-400" />
-                </div>
-                <span className="font-medium">Contest Simulation</span>
-              </div>
-              <p className="text-xs text-gray-400">
-                Practice copying real callsigns and contest exchanges to build operating skills.
-              </p>
-            </div>
-            
-            <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/40">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-1.5 rounded-md bg-green-500/20">
-                  <ToggleRight size={16} className="text-green-400" />
-                </div>
-                <span className="font-medium">Multiple Contest Types</span>
-              </div>
-              <p className="text-xs text-gray-400">
-                Practice different contest formats including Sprint, DX, Field Day and more.
-              </p>
-            </div>
-            
-            <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/40">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-1.5 rounded-md bg-purple-500/20">
-                  <Info size={16} className="text-purple-400" />
-                </div>
-                <span className="font-medium">Realistic Conditions</span>
-              </div>
-              <p className="text-xs text-gray-400">
-                Optional filter noise, QSB, and other effects to simulate real band conditions.
-              </p>
-            </div>
-          </div>
-        )}
-        
-        {showRunner && (
-          <div className="mt-4">
-            <MorseRunner 
-              wpm={wpm} 
-              qsbAmount={qsbAmount}
-              farnsworthSpacing={farnsworthSpacing}
-              frequency={frequency}
-              filterNoiseEnabled={filterNoiseEnabled}
-              onFilterNoiseToggle={onFilterNoiseToggle}
-              radioNoiseVolume={radioNoiseVolume}
-              radioNoiseResonance={radioNoiseResonance}
-              radioNoiseWarmth={radioNoiseWarmth}
-              radioNoiseDrift={radioNoiseDrift}
-              radioNoiseAtmospheric={radioNoiseAtmospheric}
-              radioNoiseCrackle={radioNoiseCrackle}
-              filterBandwidth={filterBandwidth}
-              runnerMode={runnerMode}
-              onRunningChange={handleRunningChange}
-            />
-          </div>
-        )}
-      </AnimatedSection>
-      
-      {!showRunner && (
-        <div className="bg-gray-800/20 p-5 rounded-lg border border-gray-700/30">
-          <div className="flex flex-col items-center text-center text-gray-400">
-            <Radio size={48} className="text-gray-500 opacity-30 mb-3" />
-            <h3 className="text-lg font-medium text-gray-300 mb-2">Contest Runner</h3>
-            <p className="text-sm max-w-md">
-              Click "Show Runner" above to start practicing contest operation with realistic callsigns and exchanges.
-            </p>
-            <InteractiveButton
-              onClick={toggleShowRunner}
-              className="mt-4 px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium"
+        <div className="flex flex-wrap items-center gap-4 mt-3">
+          <div className="relative min-w-[180px] z-10">
+            <label className="block text-xs text-gray-400 mb-1 ml-1">Contest Format</label>
+            <select
+              value={runnerMode}
+              onChange={(e) => setRunnerMode(e.target.value)}
+              className="w-full py-2 px-3 bg-gray-800/90 backdrop-blur-sm border border-gray-700 rounded-lg text-white appearance-none shadow-lg"
+              style={{ backgroundImage: "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e\")", 
+                       backgroundPosition: "right 0.5rem center",
+                       backgroundRepeat: "no-repeat",
+                       backgroundSize: "1.5em 1.5em",
+                       paddingRight: "2.5rem" }}
             >
-              <PlayCircle size={18} className="mr-2" />
-              Launch Runner
-            </InteractiveButton>
+              <option value="normal">Standard Contest</option>
+              <option value="pileup">Pileup Training</option>
+              <option value="practice">Practice Mode</option>
+            </select>
+          </div>
+          
+          <div className="flex-1 hidden md:block">
+            <div className="bg-gray-800/40 backdrop-blur-sm border border-gray-700/40 rounded-lg px-3 py-1.5 text-xs text-gray-300">
+              {runnerMode === 'normal' ? 
+                'Standard contest mode with individual station contacts and realistic exchanges.' : 
+               runnerMode === 'pileup' ?
+                'Simulates multiple stations calling at once - great for pile-up training. (Coming soon)' :
+                'Focused practice mode for learning contest exchanges with guided help. (Coming soon)'}
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => setShowHelp(!showHelp)}
+            className={`md:hidden p-2 px-3 rounded-lg border flex items-center gap-1 text-sm ${
+              showHelp 
+                ? 'bg-blue-600 text-white border-blue-500' 
+                : 'bg-gray-800/60 text-gray-300 border-gray-700 hover:bg-gray-700'
+            }`}
+          >
+            <Info size={16} />
+            <span>Help</span>
+          </button>
+        </div>
+      </div>
+      
+      {/* Quick Help Section */}
+      {showHelp && (
+        <div className="bg-gradient-to-r from-gray-800/40 via-gray-700/20 to-gray-800/40 rounded-xl p-4 border border-gray-700/50">
+          <h3 className="text-lg font-medium text-blue-300 mb-3 flex items-center">
+            <Info size={18} className="mr-2" />
+            Contest Runner Overview
+          </h3>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="bg-gray-800/60 rounded-lg p-3 border border-gray-700/50 backdrop-blur-sm flex flex-col h-full">
+              <div className="flex items-center gap-2 mb-2 text-blue-300">
+                <Award size={18} />
+                <h4 className="font-medium">Contest Simulation</h4>
+              </div>
+              <p className="text-xs text-gray-300 flex-1">
+                Practice realistic contest exchanges with randomly generated callsigns. Perfect for building head-copy skills and learning contest workflows.
+              </p>
+            </div>
+            
+            <div className="bg-gray-800/60 rounded-lg p-3 border border-gray-700/50 backdrop-blur-sm flex flex-col h-full">
+              <div className="flex items-center gap-2 mb-2 text-green-300">
+                <Zap size={18} />
+                <h4 className="font-medium">Multiple Contest Types</h4>
+              </div>
+              <p className="text-xs text-gray-300 flex-1">
+                Choose from different contest formats including Sprint, DX, Field Day and more. Each format has unique exchange requirements to master.
+              </p>
+            </div>
+            
+            <div className="bg-gray-800/60 rounded-lg p-3 border border-gray-700/50 backdrop-blur-sm flex flex-col h-full">
+              <div className="flex items-center gap-2 mb-2 text-purple-300">
+                <Headphones size={18} />
+                <h4 className="font-medium">Realistic Conditions</h4>
+              </div>
+              <p className="text-xs text-gray-300 flex-1">
+                Optional filter noise, QSB, and other effects simulate real band conditions. Adjust the difficulty to match your skill level and gradually increase the challenge.
+              </p>
+            </div>
+          </div>
+          
+          <div className="mt-3 flex justify-end">
+            <button 
+              onClick={() => setShowHelp(false)}
+              className="text-xs text-gray-400 hover:text-white transition-colors"
+            >
+              Close help
+            </button>
           </div>
         </div>
       )}
+      
+      {/* Main Runner Component */}
+      <div className="rounded-xl overflow-hidden border border-gray-700/50 shadow-xl">
+        <MorseRunner 
+          wpm={wpm} 
+          qsbAmount={qsbAmount}
+          farnsworthSpacing={farnsworthSpacing}
+          frequency={frequency}
+          filterNoiseEnabled={filterNoiseEnabled}
+          onFilterNoiseToggle={onFilterNoiseToggle}
+          radioNoiseVolume={radioNoiseVolume}
+          radioNoiseResonance={radioNoiseResonance}
+          radioNoiseWarmth={radioNoiseWarmth}
+          radioNoiseDrift={radioNoiseDrift}
+          radioNoiseAtmospheric={radioNoiseAtmospheric}
+          radioNoiseCrackle={radioNoiseCrackle}
+          filterBandwidth={filterBandwidth}
+          runnerMode={runnerMode}
+          onRunningChange={handleRunningChange}
+        />
+      </div>
+      
+      {/* Custom CSS for background pattern */}
+      <style jsx>{`
+        .bg-pattern {
+          background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+      `}</style>
     </div>
   );
 };
