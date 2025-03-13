@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MorseRunner } from './MorseRunner';
 import { Settings, Radio, AlertTriangle } from 'lucide-react';
 import { AnimatedSection } from './AnimatedSection';
 import { InteractiveButton } from './InteractiveButton';
+import { morseAudio } from './MorseAudio';
+import { filterNoise } from './FilterNoiseGenerator';
 
 // This component serves as the integration point between the Morse Trainer 
 // and Morse Runner, allowing them to share settings and audio resources
@@ -24,6 +26,62 @@ export const MorseRunnerController = ({
 }) => {
   const [showRunner, setShowRunner] = useState(false);
   const [runnerMode, setRunnerMode] = useState('normal'); // 'normal', 'pileup', 'practice'
+  const [isRunnerActive, setIsRunnerActive] = useState(false);
+  
+  // Ref to track if component is mounted
+  const isMountedRef = useRef(true);
+  
+  // Effect to handle unmounting - ensure all audio is stopped
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      // Force stop all audio when unmounting
+      morseAudio.stop();
+      filterNoise.stop();
+      console.log("MorseRunnerController unmounted - stopping all audio");
+    };
+  }, []);
+  
+  // Effect to handle tab switching
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isRunnerActive) {
+        stopAllAudio();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isRunnerActive]);
+  
+  // Function to stop all audio
+  const stopAllAudio = () => {
+    if (isMountedRef.current) {
+      console.log("Stopping all audio in runner controller");
+      morseAudio.stop();
+      if (filterNoiseEnabled) {
+        filterNoise.stop();
+      }
+      setIsRunnerActive(false);
+    }
+  };
+  
+  // Handle running state change from MorseRunner component
+  const handleRunningChange = (isRunning) => {
+    console.log("Runner active state changed:", isRunning);
+    setIsRunnerActive(isRunning);
+  };
+  
+  // Handle hide/show runner toggle
+  const toggleShowRunner = () => {
+    if (showRunner && isRunnerActive) {
+      // If we're hiding the runner and it's active, stop all audio
+      stopAllAudio();
+    }
+    setShowRunner(!showRunner);
+  };
   
   return (
     <div className="space-y-6">
@@ -38,7 +96,7 @@ export const MorseRunnerController = ({
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <InteractiveButton
-            onClick={() => setShowRunner(!showRunner)}
+            onClick={toggleShowRunner}
             className="py-3 rounded-lg font-medium bg-blue-600 hover:bg-blue-700 text-white"
           >
             {showRunner ? 'Hide Morse Runner' : 'Show Morse Runner'}
@@ -75,6 +133,7 @@ export const MorseRunnerController = ({
               radioNoiseCrackle={radioNoiseCrackle}
               filterBandwidth={filterBandwidth}
               runnerMode={runnerMode}
+              onRunningChange={handleRunningChange}
             />
           </div>
         )}

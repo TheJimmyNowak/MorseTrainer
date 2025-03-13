@@ -46,7 +46,8 @@ export const MorseRunner = ({
   radioNoiseDrift,
   radioNoiseAtmospheric,
   radioNoiseCrackle,
-  filterBandwidth
+  filterBandwidth,
+  onRunningChange
 }) => {
   const [running, setRunning] = useState(false);
   const [contestType, setContestType] = useState(CONTEST_TYPES.SPRINT);
@@ -72,6 +73,10 @@ export const MorseRunner = ({
   const [sendDelay, setSendDelay] = useState(1); // Delay before sending in seconds
   const [showExchangePreview, setShowExchangePreview] = useState(true);
   
+  // Additional refs to keep track of timeouts
+  const delayTimeoutRef = useRef(null);
+  const qsoTimeoutRef = useRef(null);
+  
   // Show notification
   const showNotification = (message, color = 'blue', duration = 2000) => {
     // Clear any existing notification
@@ -89,14 +94,40 @@ export const MorseRunner = ({
     }, duration);
   };
   
+  // Clean up all resources
+  const cleanupResources = useCallback(() => {
+    // Stop audio
+    morseAudio.stop();
+    if (filterNoiseEnabled) filterNoise.stop();
+    
+    // Clear all timeouts
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+      notificationTimeoutRef.current = null;
+    }
+    
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      setTimerInterval(null);
+    }
+    
+    if (delayTimeoutRef.current) {
+      clearTimeout(delayTimeoutRef.current);
+      delayTimeoutRef.current = null;
+    }
+    
+    if (qsoTimeoutRef.current) {
+      clearTimeout(qsoTimeoutRef.current);
+      qsoTimeoutRef.current = null;
+    }
+  }, [filterNoiseEnabled, timerInterval]);
+  
   // Clean up notification timeout on unmount
   useEffect(() => {
     return () => {
-      if (notificationTimeoutRef.current) {
-        clearTimeout(notificationTimeoutRef.current);
-      }
+      cleanupResources();
     };
-  }, []);
+  }, [cleanupResources]);
   
   // Initialize with a random callsign and report
   useEffect(() => {
@@ -120,9 +151,21 @@ export const MorseRunner = ({
         setRunTime(prevTime => prevTime + 1);
       }, 1000);
       setTimerInterval(interval);
-    } else if (timerInterval) {
-      clearInterval(timerInterval);
-      setTimerInterval(null);
+      
+      // Notify parent component
+      if (onRunningChange) {
+        onRunningChange(true);
+      }
+    } else {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        setTimerInterval(null);
+      }
+      
+      // Notify parent component
+      if (onRunningChange) {
+        onRunningChange(false);
+      }
     }
     
     return () => {
@@ -130,7 +173,7 @@ export const MorseRunner = ({
         clearInterval(timerInterval);
       }
     };
-  }, [running]);
+  }, [running, onRunningChange]);
   
   useEffect(() => {
     if (filterNoiseEnabled && running) {
@@ -274,7 +317,7 @@ export const MorseRunner = ({
       console.error("Error initializing audio:", error);
       
       // FALLBACK - try after a short delay (500ms)
-      setTimeout(() => {
+      delayTimeoutRef.current = setTimeout(() => {
         try {
           console.log("Trying delayed audio start as fallback");
           morseAudio.initialize();
@@ -297,9 +340,9 @@ export const MorseRunner = ({
   };
   
   const stopRunner = () => {
+    console.log("Stopping runner...");
     setRunning(false);
-    morseAudio.stop();
-    if (filterNoiseEnabled) filterNoise.stop();
+    cleanupResources();
   };
   
   const playSequence = (sequence) => {
@@ -313,7 +356,14 @@ export const MorseRunner = ({
       // Store the sequence to play to avoid state issues
       const sequenceToPlay = sequence;
       
-      setTimeout(() => {
+      // Clear any existing timeout
+      if (delayTimeoutRef.current) {
+        clearTimeout(delayTimeoutRef.current);
+      }
+      
+      delayTimeoutRef.current = setTimeout(() => {
+        if (!running) return; // Check if still running
+        
         try {
           // Initialize audio for runner mode
           morseAudio.initialize();
@@ -369,8 +419,14 @@ export const MorseRunner = ({
         setUserInput('');
         
         // Play the exchange after a short delay
-        setTimeout(() => {
-          playSequence(currentReport);
+        if (delayTimeoutRef.current) {
+          clearTimeout(delayTimeoutRef.current);
+        }
+        
+        delayTimeoutRef.current = setTimeout(() => {
+          if (running) {
+            playSequence(currentReport);
+          }
         }, 500);
       } else {
         // Show error notification
@@ -479,9 +535,14 @@ export const MorseRunner = ({
         
         console.log("Next QSO - Callsign:", newCallsign, "Exchange:", formattedExchange);
         
+        // Clear existing timeout
+        if (qsoTimeoutRef.current) {
+          clearTimeout(qsoTimeoutRef.current);
+        }
+        
         // Start the next QSO after delay
-        setTimeout(() => {
-          if (newCallsign) {
+        qsoTimeoutRef.current = setTimeout(() => {
+          if (running && newCallsign) {
             playSequence(newCallsign);
           }
         }, qsoRate * 1000);
@@ -520,6 +581,8 @@ export const MorseRunner = ({
   };
   
   const repeatCurrentAudio = () => {
+    if (!running) return;
+    
     if (inputMode === 'callsign') {
       playSequence(currentCallsign);
     } else {
@@ -624,6 +687,7 @@ export const MorseRunner = ({
               <InteractiveButton
                 onClick={repeatCurrentAudio}
                 className="py-3 rounded-lg font-medium bg-blue-500 hover:bg-blue-600 flex items-center justify-center gap-2"
+                disabled={!running}
               >
                 <LucideHeadphones size={18} />
                 <span>Repeat</span>
@@ -693,8 +757,7 @@ export const MorseRunner = ({
                     {qsos.map((qso, index) => {
                       const date = new Date(qso.time);
                       const time = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-                      
-                      return (
+return (
                         <tr key={index} className="border-t border-gray-700">
                           <td className="p-2 font-mono">{time}</td>
                           <td className="p-2 font-mono">{qso.callsign}</td>

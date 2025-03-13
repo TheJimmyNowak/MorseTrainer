@@ -672,13 +672,15 @@ const MorseTrainer = () => {
     setAdvanceThreshold(newThreshold);
   };
 
-  // Handler for changing the active mode tab
   const handleTabChange = (tab) => {
-    // If we're switching away from trainer mode and audio is playing, stop it
+
     if (activeModeTab === 'trainer' && tab !== 'trainer' && isPlaying) {
       handleTogglePlay();
     }
-    
+    if (activeModeTab === 'runner' && tab !== 'runner') {
+      morseAudio.stop();
+      if (radioNoiseEnabled) filterNoise.stop();
+    }
     setActiveModeTab(tab);
   };
 
@@ -741,7 +743,7 @@ const MorseTrainer = () => {
   return (
     <>
       <ModeSelector />
-      
+
       {activeModeTab === 'trainer' ? (
         <MorseUI
           isPlaying={isPlaying}
