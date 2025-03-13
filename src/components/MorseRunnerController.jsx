@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MorseRunner } from './MorseRunner';
-import { Settings, Radio } from 'lucide-react';
+import { Settings, Radio, AlertTriangle } from 'lucide-react';
 import { AnimatedSection } from './AnimatedSection';
 import { InteractiveButton } from './InteractiveButton';
 
@@ -30,6 +30,10 @@ export const MorseRunnerController = ({
       <AnimatedSection title="Morse Runner Mode" icon={Radio} defaultOpen={true}>
         <div className="text-gray-300 text-sm mb-4">
           <p>Morse Runner simulates contest and pile-up conditions to help you build real-world CW operating skills.</p>
+          <div className="mt-2 p-2 bg-red-500/20 border border-red-500/30 rounded-md flex items-center">
+            <AlertTriangle size={16} className="text-red-400 mr-2 flex-shrink-0" />
+            <span className="text-red-300">This feature is in early development (alpha). Expect bugs and frequent changes.</span>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">

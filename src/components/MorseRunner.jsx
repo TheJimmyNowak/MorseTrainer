@@ -7,6 +7,7 @@ import { AnimatedSection } from './AnimatedSection';
 import { HelpTooltip } from './HelpTooltip';
 import { generateRandomCallsign } from './CallsignGenerator';
 import { CONTEST_TYPES, generateExchangeData, formatExchange } from './ContestExchange';
+import { AlphaBanner } from './AlphaBanner';
 
 // Format a message by replacing placeholders with actual data
 const formatMessage = (format, data) => {
@@ -550,6 +551,7 @@ export const MorseRunner = ({
   
   return (
     <div className="space-y-6">
+      <AlphaBanner />
       <AnimatedSection title="Morse Runner" icon={Radio} defaultOpen={true}>
         <div className="space-y-6">
           {/* Contest Type Selection */}
