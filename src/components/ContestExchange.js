@@ -7,9 +7,9 @@ export const CONTEST_TYPES = {
     name: 'Sprint Contest',
     description: 'Exchange: Serial Nr, Name, QTH',
     formats: [
-      '#NR {NAME} {STATE}',
-      'NR #{NUMBER} {NAME} {STATE}',
-      '{NAME} {STATE} #{NUMBER}'
+      '{NUMBER} {NAME} {STATE}',
+      'NR {NUMBER} {NAME} {STATE}',
+      '{NAME} {STATE} {NUMBER}'
     ]
   },
   DX: {

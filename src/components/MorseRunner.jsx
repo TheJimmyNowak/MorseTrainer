@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { morseAudio } from './MorseAudio';
+import { filterNoise } from './FilterNoiseGenerator';
 import { LucideHeadphones, Activity, BarChart3, Radio, Flag, Clock, ChevronRight } from 'lucide-react';
 import { InteractiveButton } from './InteractiveButton';
 import { AnimatedSection } from './AnimatedSection';
@@ -183,7 +184,14 @@ export const MorseRunner = ({
   farnsworthSpacing,
   frequency,
   filterNoiseEnabled,
-  onFilterNoiseToggle
+  onFilterNoiseToggle,
+  radioNoiseVolume,
+  radioNoiseResonance,
+  radioNoiseWarmth,
+  radioNoiseDrift,
+  radioNoiseAtmospheric,
+  radioNoiseCrackle,
+  filterBandwidth
 }) => {
   const [running, setRunning] = useState(false);
   const [contestType, setContestType] = useState(CONTEST_TYPES.SPRINT);
@@ -210,24 +218,37 @@ export const MorseRunner = ({
     generateNewQso();
   }, [contestType]);
   
+  // Effect to log when current callsign changes
+  useEffect(() => {
+    if (currentCallsign) {
+      console.log("Current callsign updated to:", currentCallsign);
+      console.log("Current report will be:", currentReport);
+    }
+  }, [currentCallsign, currentReport]);
+  
   // Timer for the running time
   useEffect(() => {
-    if (running) {
-      const interval = setInterval(() => {
-        setRunTime(prevTime => prevTime + 1);
-      }, 1000);
-      setTimerInterval(interval);
-    } else if (timerInterval) {
-      clearInterval(timerInterval);
-      setTimerInterval(null);
-    }
-    
-    return () => {
-      if (timerInterval) {
-        clearInterval(timerInterval);
+    if (filterNoiseEnabled && running) {
+      // Initialize filter noise if needed
+      try {
+        filterNoise.initialize();
+        
+        // Configure filter noise parameters
+        filterNoise.setVolume(radioNoiseVolume || 0.5);
+        filterNoise.updateParameter('filterResonance', radioNoiseResonance || 25);
+        filterNoise.updateParameter('warmth', radioNoiseWarmth || 8);
+        filterNoise.updateParameter('driftSpeed', radioNoiseDrift || 0.5);
+        filterNoise.updateParameter('atmosphericIntensity', radioNoiseAtmospheric || 0.5);
+        filterNoise.updateParameter('crackleIntensity', radioNoiseCrackle || 0.05);
+        filterNoise.updateParameter('filterBandwidth', filterBandwidth || 550);
+        filterNoise.syncFrequency(frequency);
+      } catch (error) {
+        console.error("Error initializing filter noise in runner mode:", error);
       }
-    };
-  }, [running]);
+    }
+  }, [filterNoiseEnabled, running, radioNoiseVolume, radioNoiseResonance, 
+      radioNoiseWarmth, radioNoiseDrift, radioNoiseAtmospheric, 
+      radioNoiseCrackle, filterBandwidth, frequency]);
   
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -237,11 +258,9 @@ export const MorseRunner = ({
   
   const generateNewQso = () => {
     const newCallsign = generateRandomCallsign();
-    setCurrentCallsign(newCallsign);
     
     // Generate exchange data for the contest type
     const newExchangeData = generateRandomData();
-    setExchangeData(newExchangeData);
     
     // Choose a random format from the contest type
     const formats = contestType.formats;
@@ -249,40 +268,94 @@ export const MorseRunner = ({
     
     // Format the exchange
     const formattedExchange = formatMessage(randomFormat, newExchangeData);
-    setCurrentReport(formattedExchange);
     
     // Reset states for new QSO
     setCallsignReceived(false);
     setExchangeReceived(false);
     setInputMode('callsign');
     setUserInput('');
+    
+    // Set the state
+    setCurrentCallsign(newCallsign);
+    setExchangeData(newExchangeData);
+    setCurrentReport(formattedExchange);
+    
+    console.log("Generated new QSO - Callsign:", newCallsign, "Exchange:", formattedExchange);
   };
   
   const startRunner = () => {
+    console.log("Starting runner...");
     setRunning(true);
     setQsos([]);
     setScore(0);
     setRunTime(0);
-    generateNewQso();
     
-    // Play the first callsign
-    playSequence(currentCallsign);
+    // Generate a new QSO first to ensure we have data
+    const newCallsign = generateRandomCallsign();
+    const newExchangeData = generateRandomData();
+    const formats = contestType.formats;
+    const randomFormat = formats[Math.floor(Math.random() * formats.length)];
+    const formattedExchange = formatMessage(randomFormat, newExchangeData);
+    
+    // Set state directly rather than calling generateNewQso to ensure
+    // state is updated before playing audio
+    setCurrentCallsign(newCallsign);
+    setExchangeData(newExchangeData);
+    setCurrentReport(formattedExchange);
+    setCallsignReceived(false);
+    setExchangeReceived(false);
+    setInputMode('callsign');
+    setUserInput('');
+    
+    console.log("Initial callsign:", newCallsign);
+    console.log("Initial exchange:", formattedExchange);
+    
+    // Add a short delay to ensure state updates before playing
+    setTimeout(() => {
+      if (newCallsign) {
+        console.log("Now playing callsign:", newCallsign);
+        playSequence(newCallsign);
+      } else {
+        console.error("Error: No callsign to play");
+      }
+    }, 800);
   };
   
   const stopRunner = () => {
     setRunning(false);
     morseAudio.stop();
+    if (filterNoiseEnabled) filterNoise.stop();
   };
   
   const playSequence = (sequence) => {
     if (!running) return;
     
-    morseAudio.stop();
-    setTimeout(() => {
-      morseAudio.start();
-      // Pass actual parameters from props
-      morseAudio.playSequence(sequence, speed, farnsworthSpacing);
-    }, sendDelay * 1000);
+    try {
+      morseAudio.stop();
+      if (filterNoiseEnabled) filterNoise.stop();
+      
+      setTimeout(() => {
+        // Initialize audio for runner mode
+        morseAudio.initialize();
+        morseAudio.setFrequency(frequency);
+        morseAudio.setQsbAmount(qsbAmount);
+        morseAudio.start();
+        
+        // Play the sequence with provided settings
+        morseAudio.playSequence(sequence, speed, farnsworthSpacing);
+        
+        // Start filter noise if enabled
+        if (filterNoiseEnabled) {
+          filterNoise.syncFrequency(frequency);
+          filterNoise.setMorseAudioVolume(morseAudio.getCurrentVolume());
+          filterNoise.start();
+        }
+        
+        console.log("Playing sequence in runner mode:", sequence, speed, farnsworthSpacing);
+      }, sendDelay * 1000);
+    } catch (error) {
+      console.error("Error playing sequence in runner mode:", error);
+    }
   };
   
   const handleInput = (e) => {
@@ -303,6 +376,9 @@ export const MorseRunner = ({
       const isCorrect = userInput.trim().toUpperCase() === currentCallsign.toUpperCase();
       
       if (isCorrect) {
+        // Show success notification
+        alert(`Correct callsign: ${currentCallsign}! Now copy the exchange.`);
+        
         setCallsignReceived(true);
         setInputMode('exchange');
         setUserInput('');
@@ -312,21 +388,73 @@ export const MorseRunner = ({
           playSequence(currentReport);
         }, 500);
       } else {
+        // Show error notification
+        alert(`Wrong callsign! Expected: ${currentCallsign}. Sending again...`);
+        
         // Play the callsign again if wrong
         playSequence(currentCallsign);
       }
     } else {
-      // Exchange mode - more lenient checking as exchanges can vary
-      // Just check if they got the essential parts
-      const essentialParts = getEssentialParts(contestType.id, exchangeData);
-      const inputParts = userInput.trim().toUpperCase().split(/\s+/);
+      // Exchange mode - using a more lenient approach for validation
+      const userInputUpper = userInput.trim().toUpperCase();
       
-      // Check if all essential parts are included in the input
-      const allPartsIncluded = essentialParts.every(part => 
-        inputParts.some(inputPart => inputPart.includes(part))
-      );
+      // Get the critical exchange information based on contest type
+      const contestId = contestType.id;
       
-      if (allPartsIncluded) {
+      let isCorrect = false;
+      
+      console.log("Checking exchange:", userInputUpper);
+      console.log("Contest type:", contestId);
+      console.log("Exchange data:", exchangeData);
+      
+      // Specific validation for each contest type
+      switch (contestId) {
+        case 'sprint':
+          // Need: number, name, and state
+          const hasNumber = userInputUpper.includes(exchangeData.NUMBER) || 
+                            userInputUpper.includes('#') || 
+                            userInputUpper.includes('NR');
+          const hasName = userInputUpper.includes(exchangeData.NAME);
+          const hasState = userInputUpper.includes(exchangeData.STATE);
+          isCorrect = hasNumber && hasName && hasState;
+          console.log("Sprint validation:", {hasNumber, hasName, hasState, isCorrect});
+          break;
+          
+        case 'dx':
+          // Just need the zone
+          isCorrect = userInputUpper.includes(exchangeData.ZONE);
+          console.log("DX validation:", {hasZone: isCorrect});
+          break;
+          
+        case 'field_day':
+          // Need class and section
+          const hasClass = userInputUpper.includes(exchangeData.CLASS);
+          const hasSection = userInputUpper.includes(exchangeData.SECTION);
+          isCorrect = hasClass && hasSection;
+          console.log("Field Day validation:", {hasClass, hasSection, isCorrect});
+          break;
+          
+        case 'simple_qso':
+          // Need RST, name, and QTH
+          const hasRST = userInputUpper.includes(exchangeData.RST) || 
+                        userInputUpper.includes('5NN') || 
+                        userInputUpper.includes('599');
+          const hasQsoName = userInputUpper.includes(exchangeData.NAME);
+          const hasQTH = userInputUpper.includes(exchangeData.QTH);
+          isCorrect = hasRST && hasQsoName && hasQTH;
+          console.log("Simple QSO validation:", {hasRST, hasQsoName, hasQTH, isCorrect});
+          break;
+          
+        default:
+          // Generic validation - just check if they typed something
+          isCorrect = userInputUpper.length > 0;
+          console.log("Default validation - accepting any input");
+      }
+      
+      if (isCorrect) {
+        // Show success notification
+        alert(`Correct exchange! QSO complete with ${currentCallsign}`);
+        
         setExchangeReceived(true);
         
         // Add the completed QSO to the log
@@ -340,12 +468,36 @@ export const MorseRunner = ({
         setQsos(prevQsos => [newQso, ...prevQsos]);
         setScore(prevScore => prevScore + 1);
         
-        // Generate a new QSO after a delay
+        // Generate a new QSO
+        const newCallsign = generateRandomCallsign();
+        const newExchangeData = generateRandomData();
+        const formats = contestType.formats;
+        const randomFormat = formats[Math.floor(Math.random() * formats.length)];
+        const formattedExchange = formatMessage(randomFormat, newExchangeData);
+        
+        // Reset states for new QSO
+        setCallsignReceived(false);
+        setExchangeReceived(false);
+        setInputMode('callsign');
+        setUserInput('');
+        
+        // Set the new QSO data
+        setCurrentCallsign(newCallsign);
+        setExchangeData(newExchangeData);
+        setCurrentReport(formattedExchange);
+        
+        console.log("Next QSO - Callsign:", newCallsign, "Exchange:", formattedExchange);
+        
+        // Start the next QSO after delay
         setTimeout(() => {
-          generateNewQso();
-          playSequence(currentCallsign);
+          if (newCallsign) {
+            playSequence(newCallsign);
+          }
         }, qsoRate * 1000);
       } else {
+        // Show error notification
+        alert(`Wrong exchange! Expected something like: ${currentReport}. Sending again...`);
+        
         // Play the exchange again if wrong
         playSequence(currentReport);
       }
@@ -355,16 +507,23 @@ export const MorseRunner = ({
   };
   
   const getEssentialParts = (contestType, data) => {
+    console.log("Getting essential parts for contest type:", contestType);
+    console.log("Data available:", data);
+    
+    // Default to empty array if any issue occurs
+    if (!contestType || !data) return [];
+    
     switch (contestType) {
       case 'sprint':
-        return [data.NUMBER, data.NAME, data.STATE];
+        return [data.NUMBER, data.NAME, data.STATE].filter(Boolean);
       case 'dx':
-        return [data.ZONE];
+        return [data.ZONE].filter(Boolean);
       case 'field_day':
-        return [data.CLASS, data.SECTION];
+        return [data.CLASS, data.SECTION].filter(Boolean);
       case 'simple_qso':
-        return [data.RST, data.NAME, data.QTH];
+        return [data.RST, data.NAME, data.QTH].filter(Boolean);
       default:
+        console.log("Unknown contest type for essential parts:", contestType);
         return [];
     }
   };

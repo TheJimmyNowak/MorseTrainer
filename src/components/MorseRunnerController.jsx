@@ -13,6 +13,13 @@ export const MorseRunnerController = ({
   frequency,
   filterNoiseEnabled,
   onFilterNoiseToggle,
+  radioNoiseVolume,
+  radioNoiseResonance,
+  radioNoiseWarmth,
+  radioNoiseDrift,
+  radioNoiseAtmospheric,
+  radioNoiseCrackle,
+  filterBandwidth,
   morseSettings = {} // Optional settings from main application
 }) => {
   const [showRunner, setShowRunner] = useState(false);
@@ -56,6 +63,13 @@ export const MorseRunnerController = ({
               frequency={frequency}
               filterNoiseEnabled={filterNoiseEnabled}
               onFilterNoiseToggle={onFilterNoiseToggle}
+              radioNoiseVolume={radioNoiseVolume}
+              radioNoiseResonance={radioNoiseResonance}
+              radioNoiseWarmth={radioNoiseWarmth}
+              radioNoiseDrift={radioNoiseDrift}
+              radioNoiseAtmospheric={radioNoiseAtmospheric}
+              radioNoiseCrackle={radioNoiseCrackle}
+              filterBandwidth={filterBandwidth}
               runnerMode={runnerMode}
             />
           </div>
