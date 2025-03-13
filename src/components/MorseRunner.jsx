@@ -1,7 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { morseAudio } from './MorseAudio';
 import { filterNoise } from './FilterNoiseGenerator';
-import { LucideHeadphones, Activity, BarChart3, Radio, Flag, Clock, ChevronRight } from 'lucide-react';
+import { 
+  Headphones, 
+  Activity, 
+  BarChart3, 
+  Radio, 
+  Flag, 
+  Clock, 
+  ChevronRight,
+  RotateCcw,
+  Info,
+  Volume2
+} from 'lucide-react';
 import { InteractiveButton } from './InteractiveButton';
 import { AnimatedSection } from './AnimatedSection';
 import { HelpTooltip } from './HelpTooltip';
@@ -617,15 +628,15 @@ export const MorseRunner = ({
       <AlphaBanner />
       <AnimatedSection title="Morse Runner" icon={Radio} defaultOpen={true}>
         <div className="space-y-6">
-          {/* Contest Type Selection */}
+          {/* Contest Type Selection - Improved for mobile */}
           <div className="bg-gray-700/50 p-4 rounded-lg">
             <div className="text-sm text-gray-300 mb-3">Contest Type</div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               {Object.values(CONTEST_TYPES).map((type) => (
                 <InteractiveButton
                   key={type.id}
                   onClick={() => handleContestTypeChange(type.id)}
-                  className={`px-4 py-2 rounded text-center text-sm ${
+                  className={`px-2 py-3 rounded text-center text-sm ${
                     contestType && contestType.id === type.id 
                       ? 'bg-blue-500 hover:bg-blue-600' 
                       : 'bg-gray-600 hover:bg-gray-500'
@@ -638,15 +649,46 @@ export const MorseRunner = ({
             <div className="text-xs text-gray-400 mt-2">{contestType?.description || ''}</div>
           </div>
 
-          {/* Runner Controls */}
+          {/* Runner Controls - Improved for mobile */}
           <div className="bg-gray-700/50 p-4 rounded-lg relative">
             <HelpTooltip 
               description="Morse Runner simulates a contest environment with callsigns and exchanges. First copy the callsign, then copy the exchange. Press RETURN after each entry."
             />
-            <div className="grid grid-cols-2 gap-3">
+            
+            {/* Stats Bar - More compact for mobile */}
+            <div className="flex flex-wrap justify-between bg-gray-800 rounded-lg p-3 mb-3">
+              <div className="flex items-center gap-2 mr-4">
+                <Clock size={18} className="text-gray-400" />
+                <span className="text-lg font-mono">{formatTime(runTime)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Flag size={18} className="text-green-400" />
+                <span className="text-lg font-mono">{score}</span>
+              </div>
+              
+              <div className="flex items-center gap-2 ml-4">
+                <Volume2 size={18} className="text-gray-400" />
+                <div className="flex items-center">
+                  <InteractiveButton
+                    onClick={() => handleSpeedChange(-2)}
+                    className="w-8 h-8 rounded bg-gray-600 text-sm"
+                    disabled={speed <= 5}
+                  >-</InteractiveButton>
+                  <span className="text-lg font-mono mx-2">{speed}</span>
+                  <InteractiveButton
+                    onClick={() => handleSpeedChange(2)}
+                    className="w-8 h-8 rounded bg-gray-600 text-sm"
+                    disabled={speed >= 50}
+                  >+</InteractiveButton>
+                </div>
+              </div>
+            </div>
+            
+            {/* Start/Stop and Repeat - Full width on mobile */}
+            <div className="flex flex-col sm:flex-row gap-3">
               <InteractiveButton
                 onClick={running ? stopRunner : startRunner}
-                className={`py-3 rounded-lg font-medium ${
+                className={`flex-1 py-4 rounded-lg font-medium ${
                   running 
                     ? 'bg-red-500 hover:bg-red-600' 
                     : 'bg-green-500 hover:bg-green-600'
@@ -655,51 +697,30 @@ export const MorseRunner = ({
                 {running ? 'Stop Runner' : 'Start Runner'}
               </InteractiveButton>
               
-              <div className="bg-gray-800 rounded-lg p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Clock size={18} className="text-gray-400" />
-                  <span className="text-lg font-mono">{formatTime(runTime)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Flag size={18} className="text-green-400" />
-                  <span className="text-lg font-mono">{score}</span>
-                </div>
-              </div>
-              
-              {/* Speed Control */}
-              <div className="bg-gray-800 rounded-lg p-3 flex items-center justify-between">
-                <div className="text-sm text-gray-400">Speed</div>
-                <div className="flex items-center gap-2">
-                  <InteractiveButton
-                    onClick={() => handleSpeedChange(-2)}
-                    className="w-8 h-8 rounded bg-gray-600 text-sm"
-                    disabled={speed <= 5}
-                  >-</InteractiveButton>
-                  <span className="text-lg font-mono w-10 text-center">{speed}</span>
-                  <InteractiveButton
-                    onClick={() => handleSpeedChange(2)}
-                    className="w-8 h-8 rounded bg-gray-600 text-sm"
-                    disabled={speed >= 50}
-                  >+</InteractiveButton>
-                </div>
-              </div>
-              
               <InteractiveButton
                 onClick={repeatCurrentAudio}
-                className="py-3 rounded-lg font-medium bg-blue-500 hover:bg-blue-600 flex items-center justify-center gap-2"
+                className="flex-1 py-4 rounded-lg font-medium bg-blue-500 hover:bg-blue-600 flex items-center justify-center gap-2"
                 disabled={!running}
               >
-                <LucideHeadphones size={18} />
-                <span>Repeat</span>
+                <Headphones size={18} />
+                <span>Repeat {inputMode === 'callsign' ? 'Callsign' : 'Exchange'}</span>
               </InteractiveButton>
             </div>
           </div>
 
-          {/* Current QSO */}
+          {/* Current QSO Input - Improved for mobile */}
           <div className="bg-gray-700/50 p-4 rounded-lg relative">
-            <div className="text-sm text-gray-300 mb-2">
-              {inputMode === 'callsign' ? 'Copy Callsign' : 'Copy Exchange'}
+            <div className="text-sm text-gray-300 mb-2 flex items-center">
+              <span className="rounded bg-gray-600 px-2 py-1 mr-2">
+                {inputMode === 'callsign' ? 'Copy Callsign' : 'Copy Exchange'}
+              </span>
+              <span className="text-xs text-gray-400">
+                {inputMode === 'callsign' 
+                  ? 'Enter the station callsign you hear' 
+                  : `Enter the ${contestType.name} exchange information`}
+              </span>
             </div>
+            
             <div className="relative">
               <input
                 type="text"
@@ -712,18 +733,19 @@ export const MorseRunner = ({
                     ? 'Enter callsign...' 
                     : 'Enter exchange...'
                 }
-                className="w-full py-3 px-4 bg-gray-800 border border-gray-700 rounded-lg text-white font-mono text-xl focus:outline-none focus:border-blue-500 disabled:opacity-60"
+                className="w-full py-4 px-4 bg-gray-800 border border-gray-700 rounded-lg text-white font-mono text-xl focus:outline-none focus:border-blue-500 disabled:opacity-60"
               />
               <button
                 onClick={submitInput}
                 disabled={!running || !userInput.trim()}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-md bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:bg-gray-600"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-3 rounded-md bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:bg-gray-600"
               >
-                <ChevronRight size={20} />
+                <ChevronRight size={24} />
               </button>
             </div>
+            
             {notification && (
-              <div className={`mt-2 p-2 rounded-md text-white text-center ${
+              <div className={`mt-3 p-3 rounded-md text-white text-center ${
                 notification.color === 'red' ? 'bg-red-500' : 
                 notification.color === 'green' ? 'bg-green-500' : 
                 'bg-blue-500'
@@ -731,6 +753,7 @@ export const MorseRunner = ({
                 {notification.message}
               </div>
             )}
+            
             {showExchangePreview && !running && (
               <div className="mt-3 p-3 bg-gray-800/50 rounded border border-gray-700 text-sm text-gray-400">
                 <div className="font-medium text-gray-300 mb-1">Preview:</div>
@@ -740,36 +763,44 @@ export const MorseRunner = ({
             )}
           </div>
 
-          {/* QSO Log */}
+          {/* QSO Log - Improved for mobile */}
           <div className="bg-gray-700/50 p-4 rounded-lg">
-            <div className="text-sm text-gray-300 mb-2">QSO Log</div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm text-gray-300">QSO Log</div>
+              <div className="text-xs text-gray-400">{qsos.length} QSOs completed</div>
+            </div>
+            
             <div className="max-h-64 overflow-y-auto bg-gray-800 rounded border border-gray-700">
               {qsos.length > 0 ? (
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-900/50 sticky top-0">
-                    <tr>
-                      <th className="p-2 text-left">Time</th>
-                      <th className="p-2 text-left">Callsign</th>
-                      <th className="p-2 text-left">Exchange</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {qsos.map((qso, index) => {
-                      const date = new Date(qso.time);
-                      const time = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-return (
-                        <tr key={index} className="border-t border-gray-700">
-                          <td className="p-2 font-mono">{time}</td>
-                          <td className="p-2 font-mono">{qso.callsign}</td>
-                          <td className="p-2 font-mono">{qso.exchange}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-900/50 sticky top-0">
+                      <tr>
+                        <th className="p-2 text-left">Time</th>
+                        <th className="p-2 text-left">Callsign</th>
+                        <th className="p-2 text-left hidden sm:table-cell">Exchange</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {qsos.map((qso, index) => {
+                        const date = new Date(qso.time);
+                        const time = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                        return (
+                          <tr key={index} className="border-t border-gray-700 hover:bg-gray-700/30">
+                            <td className="p-2 font-mono">{time}</td>
+                            <td className="p-2 font-mono font-medium">{qso.callsign}</td>
+                            <td className="p-2 font-mono text-gray-300 hidden sm:table-cell">{qso.exchange}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
-                <div className="p-4 text-center text-gray-400">
-                  No QSOs logged yet. Start the runner to begin.
+                <div className="p-4 text-center text-gray-400 flex flex-col items-center justify-center">
+                  <RotateCcw size={24} className="mb-2 text-gray-500 opacity-50" />
+                  <p>No QSOs logged yet</p>
+                  <p className="text-xs text-gray-500">Start the runner to begin</p>
                 </div>
               )}
             </div>
@@ -855,43 +886,90 @@ return (
         </div>
       </AnimatedSection>
       
-      <AnimatedSection title="Help" icon={Activity} defaultOpen={false}>
+      <AnimatedSection title="Help" icon={Info} defaultOpen={false}>
         <div className="space-y-4 text-gray-300">
           <div>
-            <h3 className="text-lg font-medium mb-2">How to Use Morse Runner</h3>
-            <p>
-              Morse Runner simulates a contest or pile-up environment where you need to:
-            </p>
-            <ol className="list-decimal pl-5 space-y-2 mt-2">
-              <li>Copy a callsign sent in Morse code</li>
-              <li>Enter the callsign and press ENTER or click the button</li>
-              <li>Copy the exchange information</li>
-              <li>Enter the exchange and press ENTER</li>
-              <li>A new callsign will be sent after a short delay</li>
+            <h3 className="text-lg font-medium mb-2 flex items-center">
+              <Radio size={18} className="text-blue-400 mr-2" />
+              How to Use Morse Runner
+            </h3>
+            <ol className="list-decimal ml-5 space-y-2 mt-2">
+              <li>Begin by pressing the <span className="bg-green-500/20 text-green-300 px-1 rounded">Start Runner</span> button</li>
+              <li>Listen carefully to the callsign sent in Morse code</li>
+              <li>Type the callsign in the input field and press ENTER</li>
+              <li>After correct callsign entry, listen for the exchange information</li>
+              <li>Enter the exchange details and press ENTER</li>
+              <li>After a short delay, a new callsign will be sent</li>
             </ol>
           </div>
           
-          <div>
-            <h3 className="text-lg font-medium mb-2">Contest Types</h3>
-            <p className="mb-2">
-              Different contest formats have different exchange formats:
-            </p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Sprint Contest:</strong> Serial number, name, and state</li>
-              <li><strong>DX Contest:</strong> Signal report (usually 5NN) and zone number</li>
-              <li><strong>Field Day:</strong> Station class and ARRL section</li>
-              <li><strong>Simple QSO:</strong> Basic RST, name, and QTH exchange</li>
+          <div className="border-t border-gray-700/30 pt-3">
+            <h3 className="text-lg font-medium mb-2 flex items-center">
+              <Flag size={18} className="text-blue-400 mr-2" />
+              Contest Types
+            </h3>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-2">
+              <li className="flex items-start">
+                <span className="text-blue-400 mr-2 mt-1">•</span>
+                <div>
+                  <strong className="text-blue-300">Sprint Contest:</strong>
+                  <p className="text-xs text-gray-400">Serial number, name, and state</p>
+                </div>
+              </li>
+              <li className="flex items-start">
+                <span className="text-blue-400 mr-2 mt-1">•</span>
+                <div>
+                  <strong className="text-blue-300">DX Contest:</strong>
+                  <p className="text-xs text-gray-400">Signal report (5NN) and zone number</p>
+                </div>
+              </li>
+              <li className="flex items-start">
+                <span className="text-blue-400 mr-2 mt-1">•</span>
+                <div>
+                  <strong className="text-blue-300">Field Day:</strong>
+                  <p className="text-xs text-gray-400">Station class and ARRL section</p>
+                </div>
+              </li>
+              <li className="flex items-start">
+                <span className="text-blue-400 mr-2 mt-1">•</span>
+                <div>
+                  <strong className="text-blue-300">Simple QSO:</strong>
+                  <p className="text-xs text-gray-400">RST, name, and QTH exchange</p>
+                </div>
+              </li>
             </ul>
           </div>
           
-          <div>
-            <h3 className="text-lg font-medium mb-2">Tips for Success</h3>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Start with slower speeds and work your way up</li>
-              <li>For exchanges, you only need to copy the essential information</li>
-              <li>Use the "Repeat" button if you missed part of the transmission</li>
-              <li>Practice regularly to improve your head-copy skills</li>
-              <li>Try enabling radio noise to simulate real band conditions</li>
+          <div className="border-t border-gray-700/30 pt-3">
+            <h3 className="text-lg font-medium mb-2 flex items-center">
+              <Activity size={18} className="text-blue-400 mr-2" />
+              Tips for Success
+            </h3>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+              <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded">
+                <span className="text-blue-400 mr-2">•</span>
+                Start with slower speeds (10-15 WPM)
+              </li>
+              <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded">
+                <span className="text-blue-400 mr-2">•</span>
+                Use the Repeat button if you missed anything
+              </li>
+              <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded">
+                <span className="text-blue-400 mr-2">•</span>
+                For exchanges, focus on the essential information
+              </li>
+              <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded">
+                <span className="text-blue-400 mr-2">•</span>
+                Regular practice improves head-copy skills
+              </li>
+              <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded">
+                <span className="text-blue-400 mr-2">•</span>
+                Enable radio noise for realistic conditions
+              </li>
+              <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded">
+                <span className="text-blue-400 mr-2">•</span>
+                Increase QSO rate as your skills improve
+              </li>
             </ul>
           </div>
         </div>

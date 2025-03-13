@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MorseRunner } from './MorseRunner';
-import { Settings, Radio, AlertTriangle } from 'lucide-react';
+import { 
+  Settings, 
+  Radio, 
+  AlertTriangle, 
+  PlayCircle, 
+  PauseCircle,
+  Info, 
+  ToggleLeft,
+  ToggleRight
+} from 'lucide-react';
 import { AnimatedSection } from './AnimatedSection';
 import { InteractiveButton } from './InteractiveButton';
 import { morseAudio } from './MorseAudio';
@@ -85,39 +94,106 @@ export const MorseRunnerController = ({
   
   return (
     <div className="space-y-6">
-      <AnimatedSection title="Morse Runner Mode" icon={Radio} defaultOpen={true}>
-        <div className="text-gray-300 text-sm mb-4">
-          <p>Morse Runner simulates contest and pile-up conditions to help you build real-world CW operating skills.</p>
-          <div className="mt-2 p-2 bg-red-500/20 border border-red-500/30 rounded-md flex items-center">
-            <AlertTriangle size={16} className="text-red-400 mr-2 flex-shrink-0" />
-            <span className="text-red-300">This feature is in early development (alpha). Expect bugs and frequent changes.</span>
+      <AnimatedSection title="Morse Contest Runner" icon={Radio} defaultOpen={true}>
+        <div className="text-gray-300 mb-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div className="flex-1">
+              <h3 className="text-lg font-medium text-white mb-1">Contest Simulation</h3>
+              <p className="text-sm">Practice real-world CW contest operation with realistic callsigns and exchanges.</p>
+            </div>
+            
+            <div className="flex items-center gap-2 bg-gray-800/70 px-3 py-2 rounded-lg border border-red-500/30 text-red-300 text-xs">
+              <AlertTriangle size={16} className="text-red-400 flex-shrink-0" />
+              <span>Alpha Feature</span>
+            </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <InteractiveButton
-            onClick={toggleShowRunner}
-            className="py-3 rounded-lg font-medium bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            {showRunner ? 'Hide Morse Runner' : 'Show Morse Runner'}
-          </InteractiveButton>
-          
-          <div className="bg-gray-700/50 p-3 rounded-lg">
-            <div className="text-sm text-gray-300 mb-2">Runner Mode</div>
-            <select
-              value={runnerMode}
-              onChange={(e) => setRunnerMode(e.target.value)}
-              className="w-full p-2 bg-gray-600 rounded border border-gray-500 text-white"
-            >
-              <option value="normal">Normal Mode</option>
-              <option value="pileup">Pileup Training</option>
-              <option value="practice">Practice Mode</option>
-            </select>
+        <div className="bg-gray-800/40 p-4 rounded-lg border border-gray-700/50 mb-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-stretch">
+            <div className="flex-1">
+              <div className="mb-3">
+                <div className="text-sm text-gray-300 mb-1">Runner Mode</div>
+                <select
+                  value={runnerMode}
+                  onChange={(e) => setRunnerMode(e.target.value)}
+                  className="w-full p-3 bg-gray-700 rounded border border-gray-600 text-white"
+                >
+                  <option value="normal">Standard Contest</option>
+                  <option value="pileup">Pileup Training</option>
+                  <option value="practice">Practice Mode</option>
+                </select>
+              </div>
+              
+              <div className="text-xs text-gray-400">
+                {runnerMode === 'normal' ? 
+                  'Standard contest mode with individual station contacts.' : 
+                 runnerMode === 'pileup' ?
+                  'Simulates multiple stations calling at once - coming soon!' :
+                  'Practice mode for learning contest exchanges - coming soon!'}
+              </div>
+            </div>
+            
+            <div className="flex flex-col justify-center">
+              <InteractiveButton
+                onClick={toggleShowRunner}
+                className={`h-full py-4 px-6 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${
+                  showRunner 
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                    : 'bg-gray-700 hover:bg-gray-600 text-white'
+                }`}
+              >
+                {showRunner ? 
+                  <><PauseCircle size={20} /> Hide Runner</> : 
+                  <><PlayCircle size={20} /> Show Runner</>}
+              </InteractiveButton>
+            </div>
           </div>
         </div>
+        
+        {/* Feature Highlights */}
+        {!showRunner && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+            <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/40">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1.5 rounded-md bg-blue-500/20">
+                  <Radio size={16} className="text-blue-400" />
+                </div>
+                <span className="font-medium">Contest Simulation</span>
+              </div>
+              <p className="text-xs text-gray-400">
+                Practice copying real callsigns and contest exchanges to build operating skills.
+              </p>
+            </div>
+            
+            <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/40">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1.5 rounded-md bg-green-500/20">
+                  <ToggleRight size={16} className="text-green-400" />
+                </div>
+                <span className="font-medium">Multiple Contest Types</span>
+              </div>
+              <p className="text-xs text-gray-400">
+                Practice different contest formats including Sprint, DX, Field Day and more.
+              </p>
+            </div>
+            
+            <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/40">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1.5 rounded-md bg-purple-500/20">
+                  <Info size={16} className="text-purple-400" />
+                </div>
+                <span className="font-medium">Realistic Conditions</span>
+              </div>
+              <p className="text-xs text-gray-400">
+                Optional filter noise, QSB, and other effects to simulate real band conditions.
+              </p>
+            </div>
+          </div>
+        )}
         
         {showRunner && (
-          <div className="mt-4 bg-gray-800/60 p-4 rounded-xl border border-gray-700/50">
+          <div className="mt-4">
             <MorseRunner 
               wpm={wpm} 
               qsbAmount={qsbAmount}
@@ -138,6 +214,25 @@ export const MorseRunnerController = ({
           </div>
         )}
       </AnimatedSection>
+      
+      {!showRunner && (
+        <div className="bg-gray-800/20 p-5 rounded-lg border border-gray-700/30">
+          <div className="flex flex-col items-center text-center text-gray-400">
+            <Radio size={48} className="text-gray-500 opacity-30 mb-3" />
+            <h3 className="text-lg font-medium text-gray-300 mb-2">Contest Runner</h3>
+            <p className="text-sm max-w-md">
+              Click "Show Runner" above to start practicing contest operation with realistic callsigns and exchanges.
+            </p>
+            <InteractiveButton
+              onClick={toggleShowRunner}
+              className="mt-4 px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium"
+            >
+              <PlayCircle size={18} className="mr-2" />
+              Launch Runner
+            </InteractiveButton>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
