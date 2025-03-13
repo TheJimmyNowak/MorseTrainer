@@ -1,158 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { morseAudio } from './MorseAudio';
 import { filterNoise } from './FilterNoiseGenerator';
 import { LucideHeadphones, Activity, BarChart3, Radio, Flag, Clock, ChevronRight } from 'lucide-react';
 import { InteractiveButton } from './InteractiveButton';
 import { AnimatedSection } from './AnimatedSection';
 import { HelpTooltip } from './HelpTooltip';
+import { generateRandomCallsign } from './CallsignGenerator';
+import { CONTEST_TYPES, generateExchangeData, formatExchange } from './ContestExchange';
 
-const CONTEST_TYPES = {
-  SPRINT: {
-    id: 'sprint',
-    name: 'Sprint Contest',
-    description: 'Exchange: Serial Nr, Name, QTH',
-    formats: [
-      '#NR {NAME} {STATE}',
-      'NR #{NUMBER} {NAME} {STATE}',
-      '{NAME} {STATE} #{NUMBER}'
-    ]
-  },
-  DX: {
-    id: 'dx',
-    name: 'DX Contest',
-    description: 'Exchange: RST + Zone',
-    formats: [
-      '5NN {ZONE}',
-      'TU 5NN {ZONE}',
-      'UR 5NN {ZONE}'
-    ]
-  },
-  FIELD_DAY: {
-    id: 'field_day',
-    name: 'Field Day',
-    description: 'Exchange: Class + Section',
-    formats: [
-      '{CLASS} {SECTION}',
-      'R {CLASS} {SECTION}',
-      'TU {CLASS} {SECTION}'
-    ]
-  },
-  SIMPLE_QSO: {
-    id: 'simple_qso',
-    name: 'Simple QSO',
-    description: 'Basic RST, Name, QTH exchange',
-    formats: [
-      'RST {RST} {NAME} {QTH}',
-      'UR {RST} {NAME} {QTH}',
-      '{NAME} {QTH} {RST}'
-    ]
-  }
+// Format a message by replacing placeholders with actual data
+const formatMessage = (format, data) => {
+  return formatExchange(format, data);
 };
 
 // Generate random data for the exchange formats
 const generateRandomData = () => {
-  // Common names in ham radio and CW (shorter names are more common)
-  const NAMES = ['JIM', 'BOB', 'TOM', 'JOHN', 'DAVE', 'MIKE', 'STEVE', 'RICK', 'BILL', 'DAN', 'JOE', 'KEN', 'AL', 'ED', 'ROB'];
-  
-  // US States abbreviations
-  const STATES = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 
-                  'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-                  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT',
-                  'VA', 'WA', 'WV', 'WI', 'WY'];
-
-  // CQ zones for DX contests
-  const ZONES = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', 
-                '11', '12', '13', '14', '15', '16', '17', '18', '19', '20',
-                '21', '22', '23', '24', '25', '26', '27', '28', '29', '30',
-                '31', '32', '33', '34', '35', '36', '37', '38', '39', '40'];
-  
-  // ARRL Sections for Field Day
-  const SECTIONS = ['CT', 'EMA', 'ME', 'NH', 'RI', 'VT', 'WMA', 'ENY', 'NLI', 'NNJ', 'SNJ', 'WNY', 
-                   'DE', 'EPA', 'MDC', 'WPA', 'AL', 'GA', 'KY', 'NC', 'SC', 'TN', 'VA', 'PR', 'VI',
-                   'AR', 'LA', 'MS', 'NM', 'NTX', 'OK', 'STX', 'WTX', 'EB', 'LAX', 'ORG', 'SB', 
-                   'SCV', 'SDG', 'SF', 'SJV', 'SV', 'PAC', 'AZ', 'EWA', 'ID', 'MT', 'NV', 'OR', 
-                   'UT', 'WWA', 'WY', 'AK', 'MI', 'OH', 'WCF', 'IL', 'IN', 'WI', 'CO', 'IA', 
-                   'KS', 'MN', 'MO', 'NE', 'ND', 'SD', 'MB', 'NWT', 'AB', 'BC', 'ON', 'QC', 'MAR'];
-  
-  // Field Day Classes
-  const CLASSES = ['1A', '1B', '1C', '1D', '1E', '2A', '2B', '2C', '2D', '2E', '3A', '3B', '3C', '3D', '3E',
-                  '4A', '4B', '4C', '4D', '4E', '5A', '5B', '5C', '5D', '5E', '6A', '7A', '8A', '9A'];
-  
-  // RST options - CW usually 5NN, but add some variations
-  const RST_OPTIONS = ['5NN', '57N', '58N', '59N', '56N', '55N', '54N', '53N'];
-  
-  // Generate a random serial number between 1 and 999
-  const number = Math.floor(Math.random() * 999) + 1;
-  const paddedNumber = number.toString().padStart(3, '0');
-
-  return {
-    NAME: NAMES[Math.floor(Math.random() * NAMES.length)],
-    STATE: STATES[Math.floor(Math.random() * STATES.length)],
-    ZONE: ZONES[Math.floor(Math.random() * ZONES.length)],
-    SECTION: SECTIONS[Math.floor(Math.random() * SECTIONS.length)],
-    CLASS: CLASSES[Math.floor(Math.random() * CLASSES.length)],
-    NUMBER: paddedNumber,
-    RST: RST_OPTIONS[Math.floor(Math.random() * RST_OPTIONS.length)],
-    QTH: STATES[Math.floor(Math.random() * STATES.length)] // Using states for QTH too
-  };
-};
-
-// Generate random callsigns with weighted distribution
-const generateRandomCallsign = () => {
-  // US callsign prefixes (W, K, N, A) with frequencies
-  const US_PREFIXES = ['W', 'K', 'N', 'A'];
-  const PREFIX_WEIGHTS = [0.4, 0.4, 0.15, 0.05]; // W and K are more common
-  
-  // DX prefixes for international stations
-  const DX_PREFIXES = ['VE', 'G', 'EA', 'DL', 'F', 'I', 'JA', 'PY', 'LU', 'ZL', 'VK'];
-  
-  // Numbers 0-9
-  const NUMBERS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
-  
-  // Suffix letters (1-3 characters)
-  const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  
-  // Choose between US (80%) and DX (20%) callsign
-  let callsign = '';
-  if (Math.random() < 0.8) {
-    // Generate US callsign
-    
-    // Choose prefix based on weights
-    const prefixIndex = weightedRandom(PREFIX_WEIGHTS);
-    const prefix = US_PREFIXES[prefixIndex];
-    
-    // Add a region number (1-0)
-    const region = NUMBERS[Math.floor(Math.random() * NUMBERS.length)];
-    
-    // Add 1-3 letter suffix with higher probability for 2 or 3 letters
-    const suffixLength = weightedRandomValue([1, 2, 3], [0.15, 0.5, 0.35]);
-    
-    let suffix = '';
-    for (let i = 0; i < suffixLength; i++) {
-      suffix += LETTERS.charAt(Math.floor(Math.random() * LETTERS.length));
-    }
-    
-    callsign = `${prefix}${region}${suffix}`;
-  } else {
-    // Generate DX callsign
-    const prefix = DX_PREFIXES[Math.floor(Math.random() * DX_PREFIXES.length)];
-    
-    // Add a region number with 70% probability
-    const hasNumber = Math.random() < 0.7;
-    const region = hasNumber ? NUMBERS[Math.floor(Math.random() * NUMBERS.length)] : '';
-    
-    // Add 1-3 letter suffix
-    const suffixLength = weightedRandomValue([1, 2, 3], [0.15, 0.5, 0.35]);
-    
-    let suffix = '';
-    for (let i = 0; i < suffixLength; i++) {
-      suffix += LETTERS.charAt(Math.floor(Math.random() * LETTERS.length));
-    }
-    
-    callsign = `${prefix}${region}${suffix}`;
-  }
-  
-  return callsign;
+  return generateExchangeData();
 };
 
 // Helper function for weighted random selection
@@ -168,15 +31,6 @@ function weightedRandomValue(values, weights) {
   const index = weightedRandom(weights);
   return values[index];
 }
-
-// Format a message by replacing placeholders with actual data
-const formatMessage = (format, data) => {
-  let formatted = format;
-  Object.keys(data).forEach(key => {
-    formatted = formatted.replace(`{${key}}`, data[key]);
-  });
-  return formatted;
-};
 
 export const MorseRunner = ({ 
   wpm, 
@@ -208,14 +62,46 @@ export const MorseRunner = ({
   const [timerInterval, setTimerInterval] = useState(null);
   const [exchangeData, setExchangeData] = useState({});
   
+  // State for runner notifications
+  const [notification, setNotification] = useState(null);
+  const notificationTimeoutRef = useRef(null);
+  
   // Optional configuration settings
   const [qsoRate, setQsoRate] = useState(5); // Time between QSOs in seconds
   const [sendDelay, setSendDelay] = useState(1); // Delay before sending in seconds
   const [showExchangePreview, setShowExchangePreview] = useState(true);
   
+  // Show notification
+  const showNotification = (message, color = 'blue', duration = 2000) => {
+    // Clear any existing notification
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+    }
+    
+    // Set new notification
+    setNotification({ message, color });
+    
+    // Set timeout to clear notification
+    notificationTimeoutRef.current = setTimeout(() => {
+      setNotification(null);
+      notificationTimeoutRef.current = null;
+    }, duration);
+  };
+  
+  // Clean up notification timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+      }
+    };
+  }, []);
+  
   // Initialize with a random callsign and report
   useEffect(() => {
-    generateNewQso();
+    if (contestType) {
+      generateNewQso();
+    }
   }, [contestType]);
   
   // Effect to log when current callsign changes
@@ -227,6 +113,24 @@ export const MorseRunner = ({
   }, [currentCallsign, currentReport]);
   
   // Timer for the running time
+  useEffect(() => {
+    if (running) {
+      const interval = setInterval(() => {
+        setRunTime(prevTime => prevTime + 1);
+      }, 1000);
+      setTimerInterval(interval);
+    } else if (timerInterval) {
+      clearInterval(timerInterval);
+      setTimerInterval(null);
+    }
+    
+    return () => {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
+    };
+  }, [running]);
+  
   useEffect(() => {
     if (filterNoiseEnabled && running) {
       // Initialize filter noise if needed
@@ -262,12 +166,17 @@ export const MorseRunner = ({
     // Generate exchange data for the contest type
     const newExchangeData = generateRandomData();
     
+    if (!contestType || !contestType.formats) {
+      console.error("Invalid contest type in generateNewQso:", contestType);
+      return; // Exit early if contest type is invalid
+    }
+    
     // Choose a random format from the contest type
     const formats = contestType.formats;
     const randomFormat = formats[Math.floor(Math.random() * formats.length)];
     
     // Format the exchange
-    const formattedExchange = formatMessage(randomFormat, newExchangeData);
+    const formattedExchange = formatExchange(randomFormat, newExchangeData);
     
     // Reset states for new QSO
     setCallsignReceived(false);
@@ -293,9 +202,17 @@ export const MorseRunner = ({
     // Generate a new QSO first to ensure we have data
     const newCallsign = generateRandomCallsign();
     const newExchangeData = generateRandomData();
+    
+    // Make sure we have a valid contest type
+    if (!contestType || !contestType.formats) {
+      console.error("Invalid contest type:", contestType);
+      setContestType(CONTEST_TYPES.SPRINT); // Fallback to sprint
+      return; // Exit and let the effect handle it
+    }
+    
     const formats = contestType.formats;
     const randomFormat = formats[Math.floor(Math.random() * formats.length)];
-    const formattedExchange = formatMessage(randomFormat, newExchangeData);
+    const formattedExchange = formatExchange(randomFormat, newExchangeData);
     
     // Set state directly rather than calling generateNewQso to ensure
     // state is updated before playing audio
@@ -310,15 +227,72 @@ export const MorseRunner = ({
     console.log("Initial callsign:", newCallsign);
     console.log("Initial exchange:", formattedExchange);
     
-    // Add a short delay to ensure state updates before playing
-    setTimeout(() => {
-      if (newCallsign) {
-        console.log("Now playing callsign:", newCallsign);
-        playSequence(newCallsign);
-      } else {
-        console.error("Error: No callsign to play");
+    // Start the timer
+    const interval = setInterval(() => {
+      setRunTime(prevTime => prevTime + 1);
+    }, 1000);
+    setTimerInterval(interval);
+    
+    // Initialize audio directly and immediately
+    const callsignToPlay = newCallsign; // Keep a reference to avoid state sync issues
+    
+    // Initialize audio IMMEDIATELY without delay
+    try {
+      // Stop any existing audio
+      morseAudio.stop();
+      if (filterNoiseEnabled) filterNoise.stop();
+      
+      // Initialize the audio engine
+      morseAudio.initialize();
+      morseAudio.setFrequency(frequency);
+      morseAudio.setQsbAmount(qsbAmount);
+      morseAudio.start();
+      
+      console.log("Starting audio playback IMMEDIATELY:", callsignToPlay);
+      // Play sequence directly
+      morseAudio.playSequence(callsignToPlay, speed, farnsworthSpacing);
+      
+      // Start filter noise if enabled
+      if (filterNoiseEnabled) {
+        // Initialize filter noise
+        filterNoise.initialize();
+        filterNoise.syncFrequency(frequency);
+        filterNoise.setMorseAudioVolume(morseAudio.getCurrentVolume());
+        // Configure filter noise parameters
+        filterNoise.setVolume(radioNoiseVolume || 0.5);
+        filterNoise.updateParameter('filterResonance', radioNoiseResonance || 25);
+        filterNoise.updateParameter('warmth', radioNoiseWarmth || 8);
+        filterNoise.updateParameter('driftSpeed', radioNoiseDrift || 0.5);
+        filterNoise.updateParameter('atmosphericIntensity', radioNoiseAtmospheric || 0.5);
+        filterNoise.updateParameter('crackleIntensity', radioNoiseCrackle || 0.05);
+        filterNoise.updateParameter('filterBandwidth', filterBandwidth || 550);
+        // Start the filter noise
+        filterNoise.start();
       }
-    }, 800);
+    } catch (error) {
+      console.error("Error initializing audio:", error);
+      
+      // FALLBACK - try after a short delay (500ms)
+      setTimeout(() => {
+        try {
+          console.log("Trying delayed audio start as fallback");
+          morseAudio.initialize();
+          morseAudio.setFrequency(frequency);
+          morseAudio.setQsbAmount(qsbAmount);
+          morseAudio.start();
+          morseAudio.playSequence(callsignToPlay, speed, farnsworthSpacing);
+          
+          if (filterNoiseEnabled) {
+            filterNoise.initialize();
+            filterNoise.syncFrequency(frequency);
+            filterNoise.setMorseAudioVolume(morseAudio.getCurrentVolume());
+            filterNoise.start();
+          }
+        } catch (fallbackError) {
+          console.error("Fallback audio start also failed:", fallbackError);
+        }
+      }, 500);
+    }
   };
   
   const stopRunner = () => {
@@ -331,30 +305,40 @@ export const MorseRunner = ({
     if (!running) return;
     
     try {
+      // Stop any existing audio
       morseAudio.stop();
       if (filterNoiseEnabled) filterNoise.stop();
       
+      // Store the sequence to play to avoid state issues
+      const sequenceToPlay = sequence;
+      
       setTimeout(() => {
-        // Initialize audio for runner mode
-        morseAudio.initialize();
-        morseAudio.setFrequency(frequency);
-        morseAudio.setQsbAmount(qsbAmount);
-        morseAudio.start();
-        
-        // Play the sequence with provided settings
-        morseAudio.playSequence(sequence, speed, farnsworthSpacing);
-        
-        // Start filter noise if enabled
-        if (filterNoiseEnabled) {
-          filterNoise.syncFrequency(frequency);
-          filterNoise.setMorseAudioVolume(morseAudio.getCurrentVolume());
-          filterNoise.start();
+        try {
+          // Initialize audio for runner mode
+          morseAudio.initialize();
+          morseAudio.setFrequency(frequency);
+          morseAudio.setQsbAmount(qsbAmount);
+          morseAudio.start();
+          
+          // Play the sequence with provided settings
+          console.log("Playing sequence:", sequenceToPlay, speed, farnsworthSpacing);
+          morseAudio.playSequence(sequenceToPlay, speed, farnsworthSpacing);
+          
+          // Start filter noise if enabled
+          if (filterNoiseEnabled) {
+            // Make sure filter noise is initialized and configured
+            filterNoise.initialize();
+            filterNoise.syncFrequency(frequency);
+            filterNoise.setMorseAudioVolume(morseAudio.getCurrentVolume());
+            filterNoise.setVolume(radioNoiseVolume || 0.5);
+            filterNoise.start();
+          }
+        } catch (error) {
+          console.error("Error playing sequence:", error);
         }
-        
-        console.log("Playing sequence in runner mode:", sequence, speed, farnsworthSpacing);
       }, sendDelay * 1000);
     } catch (error) {
-      console.error("Error playing sequence in runner mode:", error);
+      console.error("Error preparing to play sequence:", error);
     }
   };
   
@@ -377,7 +361,7 @@ export const MorseRunner = ({
       
       if (isCorrect) {
         // Show success notification
-        alert(`Correct callsign: ${currentCallsign}! Now copy the exchange.`);
+        showNotification(`Correct callsign: ${currentCallsign}! Now copy the exchange.`, 'green');
         
         setCallsignReceived(true);
         setInputMode('exchange');
@@ -389,7 +373,7 @@ export const MorseRunner = ({
         }, 500);
       } else {
         // Show error notification
-        alert(`Wrong callsign! Expected: ${currentCallsign}. Sending again...`);
+        showNotification(`Wrong callsign! Expected: ${currentCallsign}. Sending again...`, 'red');
         
         // Play the callsign again if wrong
         playSequence(currentCallsign);
@@ -399,7 +383,7 @@ export const MorseRunner = ({
       const userInputUpper = userInput.trim().toUpperCase();
       
       // Get the critical exchange information based on contest type
-      const contestId = contestType.id;
+      const contestId = contestType?.id || 'sprint';
       
       let isCorrect = false;
       
@@ -453,7 +437,7 @@ export const MorseRunner = ({
       
       if (isCorrect) {
         // Show success notification
-        alert(`Correct exchange! QSO complete with ${currentCallsign}`);
+        showNotification(`Correct exchange! QSO complete with ${currentCallsign}`, 'green');
         
         setExchangeReceived(true);
         
@@ -471,9 +455,15 @@ export const MorseRunner = ({
         // Generate a new QSO
         const newCallsign = generateRandomCallsign();
         const newExchangeData = generateRandomData();
+        
+        if (!contestType || !contestType.formats) {
+          console.error("Invalid contest type in submitInput:", contestType);
+          return; // Exit early if contest type is invalid
+        }
+        
         const formats = contestType.formats;
         const randomFormat = formats[Math.floor(Math.random() * formats.length)];
-        const formattedExchange = formatMessage(randomFormat, newExchangeData);
+        const formattedExchange = formatExchange(randomFormat, newExchangeData);
         
         // Reset states for new QSO
         setCallsignReceived(false);
@@ -496,7 +486,7 @@ export const MorseRunner = ({
         }, qsoRate * 1000);
       } else {
         // Show error notification
-        alert(`Wrong exchange! Expected something like: ${currentReport}. Sending again...`);
+        showNotification(`Wrong exchange! Expected: ${currentReport}. Sending again...`, 'red');
         
         // Play the exchange again if wrong
         playSequence(currentReport);
@@ -541,11 +531,20 @@ export const MorseRunner = ({
     setSpeed(newSpeed);
   };
   
-  const handleContestTypeChange = (type) => {
-    setContestType(CONTEST_TYPES[type]);
-    // Reset the runner when changing contest type
-    if (running) {
-      stopRunner();
+  const handleContestTypeChange = (contestId) => {
+    console.log("Changing contest type to:", contestId);
+    const newContestType = Object.values(CONTEST_TYPES).find(ct => ct.id === contestId);
+    
+    if (newContestType) {
+      console.log("Found contest type:", newContestType.name);
+      setContestType(newContestType);
+      
+      // Reset the runner when changing contest type
+      if (running) {
+        stopRunner();
+      }
+    } else {
+      console.error("Contest type not found:", contestId);
     }
   };
   
@@ -562,7 +561,7 @@ export const MorseRunner = ({
                   key={type.id}
                   onClick={() => handleContestTypeChange(type.id)}
                   className={`px-4 py-2 rounded text-center text-sm ${
-                    contestType.id === type.id 
+                    contestType && contestType.id === type.id 
                       ? 'bg-blue-500 hover:bg-blue-600' 
                       : 'bg-gray-600 hover:bg-gray-500'
                   }`}
@@ -571,7 +570,7 @@ export const MorseRunner = ({
                 </InteractiveButton>
               ))}
             </div>
-            <div className="text-xs text-gray-400 mt-2">{contestType.description}</div>
+            <div className="text-xs text-gray-400 mt-2">{contestType?.description || ''}</div>
           </div>
 
           {/* Runner Controls */}
@@ -631,7 +630,7 @@ export const MorseRunner = ({
           </div>
 
           {/* Current QSO */}
-          <div className="bg-gray-700/50 p-4 rounded-lg">
+          <div className="bg-gray-700/50 p-4 rounded-lg relative">
             <div className="text-sm text-gray-300 mb-2">
               {inputMode === 'callsign' ? 'Copy Callsign' : 'Copy Exchange'}
             </div>
@@ -657,6 +656,15 @@ export const MorseRunner = ({
                 <ChevronRight size={20} />
               </button>
             </div>
+            {notification && (
+              <div className={`mt-2 p-2 rounded-md text-white text-center ${
+                notification.color === 'red' ? 'bg-red-500' : 
+                notification.color === 'green' ? 'bg-green-500' : 
+                'bg-blue-500'
+              }`}>
+                {notification.message}
+              </div>
+            )}
             {showExchangePreview && !running && (
               <div className="mt-3 p-3 bg-gray-800/50 rounded border border-gray-700 text-sm text-gray-400">
                 <div className="font-medium text-gray-300 mb-1">Preview:</div>
