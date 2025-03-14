@@ -9,6 +9,7 @@ import { MorseSequences, SEQUENCE_PRESETS } from './MorseSequences';
 import { MorseSettings } from './MorseSettings';
 import { useCustomAlphabet } from './CustomAlphabetManager';
 import { PerformanceDataManager } from './PerformanceDataManager';
+import { AlphaBanner } from './AlphaBanner';
 
 const MorseTrainer = () => {
   const morseRef = useRef(new MorseSequences());
@@ -742,6 +743,7 @@ const MorseTrainer = () => {
 
   return (
     <>
+      {activeModeTab === 'runner' && <AlphaBanner />}
       <ModeSelector />
 
       {activeModeTab === 'trainer' ? (
