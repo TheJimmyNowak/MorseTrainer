@@ -13,13 +13,13 @@ import { AvailableChars } from './AvailableChars';
 import { AudioControls } from './AudioControls';
 import { LevelProgress } from './LevelProgress';
 import { FloatingNotification } from './Notification';
-import { MainButton } from './MainButton';
 import { ModeToggle } from './ModeToggle';
 import { SidePanel } from './SidePanel';
 import { RepeatControls } from './RepeatControls';
 import { useState } from 'react';
 import { BetaBanner } from './BetaBanner';
 import { HelpTooltip } from './HelpTooltip';
+import { Zap } from 'lucide-react';
 
 const MorseUI = ({
   isPlaying,
@@ -109,26 +109,39 @@ const MorseUI = ({
         <Settings size={24} />
       </button>
 
-      <div className="max-w-7xl mx-auto px-4 pt-24 pb-16">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 text-transparent bg-clip-text">
-            Morse Code Trainer
-          </h1>
-          <p className="text-xl font-medium text-gray-400">
-            {currentPreset?.name || 'Loading...'}
-          </p>
+      <div className="max-w-7xl mx-auto px-4 pt-2 pb-16">
+        {/* Compact Header */}
+        <div className="relative mb-6 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl p-4 border border-gray-700/50 shadow-lg overflow-hidden">
+          <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 text-transparent bg-clip-text flex items-center">
+                <Radio size={22} className="text-blue-400 mr-2" />
+                Morse Code Trainer
+              </h1>
+              <p className="text-sm text-gray-400">
+                {currentPreset?.name || 'Loading...'}
+              </p>
+            </div>
+            <button
+              ref={ref => setMainButtonElement(ref)}
+              onClick={onTogglePlay}
+              className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg border border-white/5 flex items-center justify-center ${
+                isPlaying
+                  ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600'
+                  : 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-3">
+                <Zap size={24} className={isPlaying ? 'animate-pulse' : ''} />
+                <span>{isPlaying ? 'Stop Practice' : 'Start Practice'}</span>
+              </div>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Core Training */}
           <div className="space-y-8">
-            <MainButton
-              isPlaying={isPlaying}
-              onClick={onTogglePlay}
-              onButtonRef={setMainButtonElement}
-            />
-
             <AnimatedSection title="Practice Area" icon={Radio} defaultOpen={true}>
               <div className="space-y-6">
                 <CharacterDisplay

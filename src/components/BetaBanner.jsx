@@ -4,7 +4,7 @@ export const BetaBanner = () => (
   <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-yellow-500/90 via-yellow-400/90 to-yellow-500/90 text-black py-3 px-4 text-center font-bold z-50 shadow-lg backdrop-blur-sm">
     <div className="flex items-center justify-center gap-6">
       <span className="animate-bounce">🚧</span>
-      <span>BETA VERSION - IN DEVELOPMENT</span>
+      <span>BETA</span>
       <span className="animate-bounce">🚧</span>
 
       <div className="flex items-center gap-4 ml-4">
