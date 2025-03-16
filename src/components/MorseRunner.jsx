@@ -329,66 +329,58 @@ export const MorseRunner = ({
     }, 1000);
     setTimerInterval(interval);
 
-    // Initialize audio directly and immediately
-    const callsignToPlay = newCallsign; // Keep a reference to avoid state sync issues
+    // This part has been fixed to ensure audio always plays when starting
+    const callsignToPlay = newCallsign;
 
-    // Initialize audio IMMEDIATELY without delay
-    try {
-      // Stop any existing audio
-      morseAudio.stop();
-      if (filterNoiseEnabled) filterNoise.stop();
+    // Ensure any existing audio is properly stopped
+    morseAudio.stop();
+    if (filterNoiseEnabled) filterNoise.stop();
 
-      // Initialize the audio engine
-      morseAudio.initialize();
-      morseAudio.setFrequency(frequency);
-      morseAudio.setQsbAmount(qsbAmount);
-      morseAudio.start();
+    // Wait a very short delay before starting audio to ensure UI updates first
+    setTimeout(() => {
+      try {
+        console.log("Starting audio playback:", callsignToPlay);
 
-      console.log("Starting audio playback IMMEDIATELY:", callsignToPlay);
-      // Play sequence directly
-      morseAudio.playSequence(callsignToPlay, speed, farnsworthSpacing);
+        // First initialize audio
+        morseAudio.initialize();
+        morseAudio.setFrequency(frequency);
+        morseAudio.setQsbAmount(qsbAmount);
 
-      // Start filter noise if enabled
-      if (filterNoiseEnabled) {
-        // Initialize filter noise
-        filterNoise.initialize();
-        filterNoise.syncFrequency(frequency);
-        filterNoise.setMorseAudioVolume(morseAudio.getCurrentVolume());
-        // Configure filter noise parameters
-        filterNoise.setVolume(radioNoiseVolume || 0.5);
-        filterNoise.updateParameter('filterResonance', radioNoiseResonance || 25);
-        filterNoise.updateParameter('warmth', radioNoiseWarmth || 8);
-        filterNoise.updateParameter('driftSpeed', radioNoiseDrift || 0.5);
-        filterNoise.updateParameter('atmosphericIntensity', radioNoiseAtmospheric || 0.5);
-        filterNoise.updateParameter('crackleIntensity', radioNoiseCrackle || 0.05);
-        filterNoise.updateParameter('filterBandwidth', filterBandwidth || 550);
-        // Start the filter noise
-        filterNoise.start();
-      }
-    } catch (error) {
-      console.error("Error initializing audio:", error);
+        // Explicitly start the morseAudio
+        morseAudio.start();
 
-      // FALLBACK - try after a short delay (500ms)
-      delayTimeoutRef.current = setTimeout(() => {
-        try {
-          console.log("Trying delayed audio start as fallback");
-          morseAudio.initialize();
-          morseAudio.setFrequency(frequency);
-          morseAudio.setQsbAmount(qsbAmount);
-          morseAudio.start();
-          morseAudio.playSequence(callsignToPlay, speed, farnsworthSpacing);
+        // Now play the sequence
+        morseAudio.playSequence(callsignToPlay, speed, farnsworthSpacing);
 
-          if (filterNoiseEnabled) {
-            filterNoise.initialize();
-            filterNoise.syncFrequency(frequency);
-            filterNoise.setMorseAudioVolume(morseAudio.getCurrentVolume());
-            filterNoise.start();
-          }
-        } catch (fallbackError) {
-          console.error("Fallback audio start also failed:", fallbackError);
+        // Start filter noise if enabled
+        if (filterNoiseEnabled) {
+          filterNoise.initialize();
+          filterNoise.syncFrequency(frequency);
+          filterNoise.setMorseAudioVolume(morseAudio.getCurrentVolume());
+          filterNoise.setVolume(radioNoiseVolume || 0.5);
+          filterNoise.start();
         }
-      }, 500);
-    }
+      } catch (error) {
+        console.error("Error starting audio:", error);
+
+        // Try one more time with a slightly longer delay
+        setTimeout(() => {
+          try {
+            console.log("Retry starting audio...");
+            morseAudio.initialize();
+            morseAudio.start();
+            morseAudio.playSequence(callsignToPlay, speed, farnsworthSpacing);
+
+            if (filterNoiseEnabled) {
+              filterNoise.initialize();
+              filterNoise.start();
+            }
+          } catch (retryError) {
+            console.error("Retry also failed:", retryError);
+          }
+        }, 300);
+      }
+    }, 50);
   };
 
   const stopRunner = () => {
