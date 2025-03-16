@@ -1,5 +1,3 @@
-// Modified MorseRunner.jsx with separate input fields and improved keyboard navigation
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { morseAudio } from './MorseAudio';
 import { filterNoise } from './FilterNoiseGenerator';
@@ -43,6 +41,17 @@ function weightedRandom(weights) {
 function weightedRandomValue(values, weights) {
   const index = weightedRandom(weights);
   return values[index];
+}
+
+// Validate callsign format to avoid invalid callsigns
+function isValidCallsign(callsign) {
+  // Basic validation: should contain at least one letter and one number
+  // and not contain characters that aren't used in real callsigns
+  const hasLetter = /[A-Z]/.test(callsign);
+  const hasNumber = /[0-9]/.test(callsign);
+  const validChars = /^[A-Z0-9\/]+$/.test(callsign);
+
+  return hasLetter && hasNumber && validChars;
 }
 
 export const MorseRunner = ({
@@ -89,8 +98,8 @@ export const MorseRunner = ({
   const notificationTimeoutRef = useRef(null);
 
   // Optional configuration settings
-  const [qsoRate, setQsoRate] = useState(5); // Time between QSOs in seconds
-  const [sendDelay, setSendDelay] = useState(1); // Delay before sending in seconds
+  const [qsoRate, setQsoRate] = useState(3); // Time between QSOs in seconds (reduced from 5 to 3)
+  const [sendDelay, setSendDelay] = useState(0.5); // Delay before sending in seconds (reduced from 1 to 0.5)
   const [showExchangePreview, setShowExchangePreview] = useState(true);
 
   // Additional refs to keep track of timeouts
@@ -234,7 +243,11 @@ export const MorseRunner = ({
   };
 
   const generateNewQso = () => {
-    const newCallsign = generateRandomCallsign();
+    // Keep generating callsigns until we get a valid one
+    let newCallsign;
+    do {
+      newCallsign = generateRandomCallsign();
+    } while (!isValidCallsign(newCallsign));
 
     // Generate exchange data for the contest type
     const newExchangeData = generateRandomData();
@@ -246,7 +259,9 @@ export const MorseRunner = ({
 
     // Choose a random format from the contest type
     const formats = contestType.formats;
-    const randomFormat = formats[Math.floor(Math.random() * formats.length)];
+    // Remove formats that end with K or TU
+    const filteredFormats = formats.filter(f => !f.endsWith(' K'));
+    const randomFormat = filteredFormats[Math.floor(Math.random() * filteredFormats.length)];
 
     // Format the exchange
     const formattedExchange = formatExchange(randomFormat, newExchangeData);
@@ -274,7 +289,11 @@ export const MorseRunner = ({
     setRunTime(0);
 
     // Generate a new QSO first to ensure we have data
-    const newCallsign = generateRandomCallsign();
+    let newCallsign;
+    do {
+      newCallsign = generateRandomCallsign();
+    } while (!isValidCallsign(newCallsign));
+
     const newExchangeData = generateRandomData();
 
     // Make sure we have a valid contest type
@@ -285,7 +304,9 @@ export const MorseRunner = ({
     }
 
     const formats = contestType.formats;
-    const randomFormat = formats[Math.floor(Math.random() * formats.length)];
+    // Remove formats that end with K or TU
+    const filteredFormats = formats.filter(f => !f.endsWith(' K'));
+    const randomFormat = filteredFormats[Math.floor(Math.random() * filteredFormats.length)];
     const formattedExchange = formatExchange(randomFormat, newExchangeData);
 
     // Set state directly rather than calling generateNewQso to ensure
@@ -586,7 +607,11 @@ export const MorseRunner = ({
       setScore(prevScore => prevScore + 1);
 
       // Generate a new QSO
-      const newCallsign = generateRandomCallsign();
+      let newCallsign;
+      do {
+        newCallsign = generateRandomCallsign();
+      } while (!isValidCallsign(newCallsign));
+
       const newExchangeData = generateRandomData();
 
       if (!contestType || !contestType.formats) {
@@ -595,7 +620,9 @@ export const MorseRunner = ({
       }
 
       const formats = contestType.formats;
-      const randomFormat = formats[Math.floor(Math.random() * formats.length)];
+      // Remove formats that end with K or TU
+      const filteredFormats = formats.filter(f => !f.endsWith(' K'));
+      const randomFormat = filteredFormats[Math.floor(Math.random() * filteredFormats.length)];
       const formattedExchange = formatExchange(randomFormat, newExchangeData);
 
       // Reset states for new QSO
@@ -622,7 +649,8 @@ export const MorseRunner = ({
         clearTimeout(qsoTimeoutRef.current);
       }
 
-      // Start the next QSO after delay
+      // Start the next QSO after delay - IMMEDIATELY GO TO NEXT CALLSIGN
+      // Don't repeat the exchange after successful QSO
       qsoTimeoutRef.current = setTimeout(() => {
         if (running && newCallsign) {
           playSequence(newCallsign);
@@ -661,6 +689,24 @@ export const MorseRunner = ({
 
   const repeatCurrentAudio = () => {
     if (!running) return;
+
+    // Fix for hang after stopping and starting
+    if (running && !currentCallsign) {
+      generateNewQso();
+
+      setTimeout(() => {
+        if (currentCallsign) {
+          playSequence(currentCallsign);
+        } else {
+          // Emergency fallback to create a new QSO directly
+          const tempCallsign = generateRandomCallsign();
+          setCurrentCallsign(tempCallsign);
+          playSequence(tempCallsign);
+        }
+      }, 200);
+
+      return;
+    }
 
     if (inputMode === 'callsign') {
       playSequence(currentCallsign);
@@ -740,7 +786,7 @@ export const MorseRunner = ({
 
               {/* Stats Bar - More fancy dashboard style */}
               <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="bg-gray-900/60 backdrop-blur-sm rounded-lg p-3 border border-gray-700/50 flex items-center justify-between">
+              <div className="bg-gray-900/60 backdrop-blur-sm rounded-lg p-3 border border-gray-700/50 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-gray-800/80 flex items-center justify-center">
                       <Clock size={18} className="text-blue-400" />
@@ -1070,23 +1116,23 @@ export const MorseRunner = ({
               </div>
               <div className="flex items-center gap-2">
                 <InteractiveButton
-                  onClick={() => setQsoRate(Math.max(2, qsoRate - 1))}
+                  onClick={() => setQsoRate(Math.max(1, qsoRate - 1))}
                   className="w-10 h-10 rounded bg-gray-700 hover:bg-gray-600 border border-gray-600 shadow-sm"
-                  disabled={qsoRate <= 2}
+                  disabled={qsoRate <= 1}
                 >-</InteractiveButton>
                 <div className="flex-1">
                   <div className="w-full bg-gray-700 rounded-full h-2 shadow-inner">
                     <div
                       className="bg-gradient-to-r from-blue-600 to-blue-400 h-2 rounded-full transition-all duration-200"
-                      style={{ width: `${Math.min(100, (qsoRate / 15) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (qsoRate / 10) * 100)}%` }}
                     />
                   </div>
                   <div className="text-center mt-1 text-gray-300 font-medium">{qsoRate} seconds</div>
                 </div>
                 <InteractiveButton
-                  onClick={() => setQsoRate(Math.min(15, qsoRate + 1))}
+                  onClick={() => setQsoRate(Math.min(10, qsoRate + 1))}
                   className="w-10 h-10 rounded bg-gray-700 hover:bg-gray-600 border border-gray-600 shadow-sm"
-                  disabled={qsoRate >= 15}
+                  disabled={qsoRate >= 10}
                 >+</InteractiveButton>
               </div>
             </div>
@@ -1101,23 +1147,23 @@ export const MorseRunner = ({
               </div>
               <div className="flex items-center gap-2">
                 <InteractiveButton
-                  onClick={() => setSendDelay(Math.max(0.5, sendDelay - 0.5))}
+                  onClick={() => setSendDelay(Math.max(0.1, sendDelay - 0.1))}
                   className="w-10 h-10 rounded bg-gray-700 hover:bg-gray-600 border border-gray-600 shadow-sm"
-                  disabled={sendDelay <= 0.5}
+                  disabled={sendDelay <= 0.1}
                 >-</InteractiveButton>
                 <div className="flex-1">
                   <div className="w-full bg-gray-700 rounded-full h-2 shadow-inner">
                     <div
                       className="bg-gradient-to-r from-green-600 to-green-400 h-2 rounded-full transition-all duration-200"
-                      style={{ width: `${Math.min(100, (sendDelay / 5) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (sendDelay / 2) * 100)}%` }}
                     />
                   </div>
-                  <div className="text-center mt-1 text-gray-300 font-medium">{sendDelay} seconds</div>
+                  <div className="text-center mt-1 text-gray-300 font-medium">{sendDelay.toFixed(1)} seconds</div>
                 </div>
                 <InteractiveButton
-                  onClick={() => setSendDelay(Math.min(5, sendDelay + 0.5))}
+                  onClick={() => setSendDelay(Math.min(2, sendDelay + 0.1))}
                   className="w-10 h-10 rounded bg-gray-700 hover:bg-gray-600 border border-gray-600 shadow-sm"
-                  disabled={sendDelay >= 5}
+                  disabled={sendDelay >= 2}
                 >+</InteractiveButton>
               </div>
             </div>
@@ -1131,7 +1177,7 @@ export const MorseRunner = ({
                 Show Exchange Preview
               </div>
               <InteractiveButton
-                onClick={() => setShowExchangePreview(!showExchangePreview)}
+onClick={() => setShowExchangePreview(!showExchangePreview)}
                 className={`w-full px-4 py-3 rounded-lg font-medium border shadow-sm transition-all duration-200 ${
                   showExchangePreview
                     ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-blue-500/50'
@@ -1174,85 +1220,86 @@ export const MorseRunner = ({
               <ol className="list-decimal ml-5 space-y-2 mt-2">
                 <li>Begin by pressing the <span className="bg-green-500/20 text-green-300 px-1 rounded">Start Contest</span> button</li>
                 <li>Listen carefully to the callsign sent in Morse code</li>
-              <li>Type the callsign in the callsign field and press ENTER or SPACE to submit</li>
-              <li>After correct callsign entry, listen for the exchange information</li>
-              <li>Enter the exchange details in the exchange field and press ENTER</li>
-              <li>After a successful QSO, a new callsign will be sent automatically</li>
-              <li>Use TAB or SPACE to navigate between input fields quickly</li>
-            </ol>
-          </div>
+                <li>Type the callsign in the callsign field and press ENTER or SPACE to submit</li>
+                <li>After correct callsign entry, listen for the exchange information</li>
+                <li>Enter the exchange details in the exchange field and press ENTER</li>
+                <li>After a successful QSO, a new callsign will be sent automatically</li>
+                <li>Use TAB or SPACE to navigate between input fields quickly</li>
+              </ol>
+            </div>
 
-          <div className="border-t border-gray-700/30 pt-3">
-            <h3 className="text-lg font-medium mb-2 flex items-center">
-              <Flag size={18} className="text-blue-400 mr-2" />
-              Contest Types
-            </h3>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-2">
-              <li className="flex items-start">
-                <span className="text-blue-400 mr-2 mt-1">•</span>
-                <div>
-                  <strong className="text-blue-300">Sprint Contest:</strong>
-                  <p className="text-xs text-gray-400">Serial number, name, and state</p>
-                </div>
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-400 mr-2 mt-1">•</span>
-                <div>
-                  <strong className="text-blue-300">DX Contest:</strong>
-                  <p className="text-xs text-gray-400">Signal report (5NN) and zone number</p>
-                </div>
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-400 mr-2 mt-1">•</span>
-                <div>
-                  <strong className="text-blue-300">Field Day:</strong>
-                  <p className="text-xs text-gray-400">Station class and ARRL section</p>
-                </div>
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-400 mr-2 mt-1">•</span>
-                <div>
-                  <strong className="text-blue-300">Simple QSO:</strong>
-                  <p className="text-xs text-gray-400">RST, name, and QTH exchange</p>
-                </div>
-              </li>
-            </ul>
-          </div>
+            <div className="border-t border-gray-700/30 pt-3">
+              <h3 className="text-lg font-medium mb-2 flex items-center">
+                <Flag size={18} className="text-blue-400 mr-2" />
+                Contest Types
+              </h3>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-2">
+                <li className="flex items-start">
+                  <span className="text-blue-400 mr-2 mt-1">•</span>
+                  <div>
+                    <strong className="text-blue-300">Sprint Contest:</strong>
+                    <p className="text-xs text-gray-400">Serial number, name, and state</p>
+                  </div>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-400 mr-2 mt-1">•</span>
+                  <div>
+                    <strong className="text-blue-300">DX Contest:</strong>
+                    <p className="text-xs text-gray-400">Signal report (5NN) and zone number</p>
+                  </div>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-400 mr-2 mt-1">•</span>
+                  <div>
+                    <strong className="text-blue-300">Field Day:</strong>
+                    <p className="text-xs text-gray-400">Station class and ARRL section</p>
+                  </div>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-400 mr-2 mt-1">•</span>
+                  <div>
+                    <strong className="text-blue-300">Simple QSO:</strong>
+                    <p className="text-xs text-gray-400">RST, name, and QTH exchange</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
 
-          <div className="border-t border-gray-700/30 pt-3">
-            <h3 className="text-lg font-medium mb-2 flex items-center">
-              <Activity size={18} className="text-blue-400 mr-2" />
-              Tips for Success
-            </h3>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-              <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded border border-gray-700/30">
-                <span className="text-blue-400 mr-2">•</span>
-                Start with slower speeds (10-15 WPM)
-              </li>
-              <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded border border-gray-700/30">
-                <span className="text-blue-400 mr-2">•</span>
-                Use the Repeat button if you missed anything
-              </li>
-              <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded border border-gray-700/30">
-                <span className="text-blue-400 mr-2">•</span>
-                For exchanges, focus on the essential information
-              </li>
-              <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded border border-gray-700/30">
-                <span className="text-blue-400 mr-2">•</span>
-                Use keyboard shortcuts to speed up your workflow
-              </li>
-              <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded border border-gray-700/30">
-                <span className="text-blue-400 mr-2">•</span>
-                Enable radio noise for realistic conditions
-              </li>
-              <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded border border-gray-700/30">
-                <span className="text-blue-400 mr-2">•</span>
-                Increase QSO rate as your skills improve
-              </li>
-            </ul>
+            <div className="border-t border-gray-700/30 pt-3">
+              <h3 className="text-lg font-medium mb-2 flex items-center">
+                <Activity size={18} className="text-blue-400 mr-2" />
+                Tips for Success
+              </h3>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded border border-gray-700/30">
+                  <span className="text-blue-400 mr-2">•</span>
+                  Start with slower speeds (10-15 WPM)
+                </li>
+                <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded border border-gray-700/30">
+                  <span className="text-blue-400 mr-2">•</span>
+                  Use the Repeat button if you missed anything
+                </li>
+                <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded border border-gray-700/30">
+                  <span className="text-blue-400 mr-2">•</span>
+                  For exchanges, focus on the essential information
+                </li>
+                <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded border border-gray-700/30">
+                  <span className="text-blue-400 mr-2">•</span>
+                  Use keyboard shortcuts to speed up your workflow
+                </li>
+                <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded border border-gray-700/30">
+                  <span className="text-blue-400 mr-2">•</span>
+                  Enable radio noise for realistic conditions
+                </li>
+                <li className="flex items-center text-sm bg-gray-800/40 p-2 rounded border border-gray-700/30">
+                  <span className="text-blue-400 mr-2">•</span>
+                  Increase QSO rate as your skills improve
+                </li>
+              </ul>
+            </div>
           </div>
-        </div>
-      </AnimatedSection>
-    </div>
+        </AnimatedSection>
+      </div>
+
   );
 };
