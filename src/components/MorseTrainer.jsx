@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MorseUI from './MorseUI';
 import { MorseRunnerController } from './MorseRunnerController';
@@ -10,6 +8,9 @@ import { MorseSettings } from './MorseSettings';
 import { useCustomAlphabet } from './CustomAlphabetManager';
 import { PerformanceDataManager } from './PerformanceDataManager';
 import { AlphaBanner } from './AlphaBanner';
+import { SettingsButton } from './SettingsButton';
+import { SharedSettingsPanel } from './SharedSettingsPanel';
+import { CONTEST_TYPES } from './ContestExchange';
 
 const MorseTrainer = () => {
   const morseRef = useRef(new MorseSequences());
@@ -49,28 +50,28 @@ const MorseTrainer = () => {
       farnsworthSpacing: settings.farnsworthSpacing || 0,
       filterBandwidth: settings.filterBandwidth || 550,
       infiniteDelayEnabled: settings.infiniteDelayEnabled || false,
+      // Runner mode settings
+      qsoRate: settings.qsoRate || 3,
+      sendDelay: settings.sendDelay || 0.5,
+      showExchangePreview: settings.showExchangePreview !== undefined ? settings.showExchangePreview : true,
+      contestTypeId: settings.contestTypeId || 'sprint',
       // New setting for mode
       activeModeTab: settings.activeModeTab || 'trainer'
     };
   };
 
   const savedSettings = loadSettings();
+
+  // Shared state between both modes
   const [currentLevel, setCurrentLevel] = useState(savedSettings.currentLevel);
   const [wpm, setWpm] = useState(savedSettings.wpm);
   const [frequency, setFrequency] = useState(savedSettings.frequency);
-  const [groupSize, setGroupSize] = useState(savedSettings.groupSize);
-  const [minGroupSize, setMinGroupSize] = useState(savedSettings.minGroupSize);
-  const [maxRepeats, setMaxRepeats] = useState(savedSettings.maxRepeats);
-  const [advanceThreshold, setAdvanceThreshold] = useState(savedSettings.advanceThreshold);
-  const [headCopyMode, setHeadCopyMode] = useState(savedSettings.headCopyMode);
-  const [hideChars, setHideChars] = useState(savedSettings.hideChars);
-  const [showAnswer, setShowAnswer] = useState(false);
-  const [currentPreset, setCurrentPreset] = useState(morseRef.current.getCurrentPreset());
-  const [progressiveSpeedMode, setProgressiveSpeedMode] = useState(savedSettings.progressiveSpeedMode);
+  const [farnsworthSpacing, setFarnsworthSpacing] = useState(savedSettings.farnsworthSpacing || 0);
+  const [qsbAmount, setQsbAmount] = useState(savedSettings.qsbAmount || 0);
   const [levelSpacing, setLevelSpacing] = useState(savedSettings.levelSpacing);
   const [transitionDelay, setTransitionDelay] = useState(savedSettings.transitionDelay);
 
-  // Filter noise state
+  // Filter noise state (shared)
   const [radioNoiseEnabled, setRadioNoiseEnabled] = useState(savedSettings.radioNoiseEnabled);
   const [radioNoiseVolume, setRadioNoiseVolume] = useState(savedSettings.radioNoiseVolume);
   const [radioNoiseResonance, setRadioNoiseResonance] = useState(savedSettings.radioNoiseResonance);
@@ -80,20 +81,23 @@ const MorseTrainer = () => {
   const [radioNoiseCrackle, setRadioNoiseCrackle] = useState(savedSettings.radioNoiseCrackle);
   const [filterBandwidth, setFilterBandwidth] = useState(savedSettings.filterBandwidth || 550);
 
-  // Keep QSB
-  const [qsbAmount, setQsbAmount] = useState(savedSettings.qsbAmount || 0);
-
-  // New state for active mode tab
-  const [activeModeTab, setActiveModeTab] = useState(savedSettings.activeModeTab || 'trainer');
-
+  // Trainer-specific state
+  const [groupSize, setGroupSize] = useState(savedSettings.groupSize);
+  const [minGroupSize, setMinGroupSize] = useState(savedSettings.minGroupSize);
+  const [maxRepeats, setMaxRepeats] = useState(savedSettings.maxRepeats);
+  const [advanceThreshold, setAdvanceThreshold] = useState(savedSettings.advanceThreshold);
+  const [headCopyMode, setHeadCopyMode] = useState(savedSettings.headCopyMode);
+  const [hideChars, setHideChars] = useState(savedSettings.hideChars);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [currentPreset, setCurrentPreset] = useState(morseRef.current.getCurrentPreset());
+  const [progressiveSpeedMode, setProgressiveSpeedMode] = useState(savedSettings.progressiveSpeedMode);
+  const [infiniteDelayEnabled, setInfiniteDelayEnabled] = useState(savedSettings.infiniteDelayEnabled || false);
   const [currentGroupSize, setCurrentGroupSize] = useState(0);
   const [userInput, setUserInput] = useState('');
   const [currentGroup, setCurrentGroup] = useState('');
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
   const [history, setHistory] = useState([]);
-  // Load performance data from cookies during initialization
   const [performanceData, setPerformanceData] = useState(() => {
-    // Only attempt to load from cookies in browser environment
     if (typeof window !== 'undefined') {
       return PerformanceDataManager.load();
     }
@@ -103,8 +107,22 @@ const MorseTrainer = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [notification, setNotification] = useState('');
   const [isPaused, setIsPaused] = useState(false);
-  const [farnsworthSpacing, setFarnsworthSpacing] = useState(savedSettings.farnsworthSpacing || 0);
-  const [infiniteDelayEnabled, setInfiniteDelayEnabled] = useState(savedSettings.infiniteDelayEnabled || false);
+
+  // Runner-specific state
+  const [qsoRate, setQsoRate] = useState(savedSettings.qsoRate || 3);
+  const [sendDelay, setSendDelay] = useState(savedSettings.sendDelay || 0.5);
+  const [showExchangePreview, setShowExchangePreview] = useState(
+    savedSettings.showExchangePreview !== undefined ? savedSettings.showExchangePreview : true
+  );
+  const [contestType, setContestType] = useState(
+    CONTEST_TYPES[savedSettings.contestTypeId] || CONTEST_TYPES.SPRINT
+  );
+
+  // New setting for active mode tab
+  const [activeModeTab, setActiveModeTab] = useState(savedSettings.activeModeTab || 'trainer');
+
+  // Settings panel state
+  const [isSettingsPanelVisible, setIsSettingsPanelVisible] = useState(false);
 
   const notificationTimeoutRef = useRef(null);
 
@@ -314,6 +332,11 @@ const MorseTrainer = () => {
       radioNoiseCrackle,
       filterBandwidth,
       infiniteDelayEnabled,
+      // Runner-specific settings
+      qsoRate,
+      sendDelay,
+      showExchangePreview,
+      contestTypeId: contestType?.id || 'sprint',
       // Save active mode tab
       activeModeTab
     });
@@ -323,7 +346,9 @@ const MorseTrainer = () => {
     levelSpacing, transitionDelay, activeModeTab,
     // Include filter noise settings
     radioNoiseEnabled, radioNoiseVolume, radioNoiseResonance, radioNoiseWarmth,
-    radioNoiseDrift, radioNoiseAtmospheric, radioNoiseCrackle, filterBandwidth
+    radioNoiseDrift, radioNoiseAtmospheric, radioNoiseCrackle, filterBandwidth,
+    // Runner settings
+    qsoRate, sendDelay, showExchangePreview, contestType
   ]);
 
   const handleInfiniteDelayToggle = () => {
@@ -673,8 +698,29 @@ const MorseTrainer = () => {
     setAdvanceThreshold(newThreshold);
   };
 
-  const handleTabChange = (tab) => {
+  // Runner-specific handlers
+  const handleQsoRateChange = (delta) => {
+    const newRate = Math.max(1, Math.min(10, qsoRate + delta));
+    setQsoRate(newRate);
+  };
 
+  const handleSendDelayChange = (delta) => {
+    const newDelay = Math.max(0.1, Math.min(2, sendDelay + delta));
+    setSendDelay(newDelay);
+  };
+
+  const handleShowExchangePreviewToggle = () => {
+    setShowExchangePreview(!showExchangePreview);
+  };
+
+  const handleContestTypeChange = (contestTypeId) => {
+    const newContestType = Object.values(CONTEST_TYPES).find(ct => ct.id === contestTypeId);
+    if (newContestType) {
+      setContestType(newContestType);
+    }
+  };
+
+  const handleTabChange = (tab) => {
     if (activeModeTab === 'trainer' && tab !== 'trainer' && isPlaying) {
       handleTogglePlay();
     }
@@ -746,23 +792,98 @@ const MorseTrainer = () => {
       {activeModeTab === 'runner' && <AlphaBanner />}
       <ModeSelector />
 
+      {/* Shared Settings Button - appears in both modes */}
+      <SettingsButton
+        onClick={() => setIsSettingsPanelVisible(!isSettingsPanelVisible)}
+        isActive={isSettingsPanelVisible}
+      />
+
+      {/* Shared Settings Panel - content adapts based on active mode */}
+      <SharedSettingsPanel
+        isVisible={isSettingsPanelVisible}
+        onVisibilityChange={setIsSettingsPanelVisible}
+        activeModeTab={activeModeTab}
+
+        // Audio settings (shared)
+        frequency={frequency}
+        onFrequencyChange={handleFrequencyChange}
+        wpm={wpm}
+        onWpmChange={handleWpmChange}
+        farnsworthSpacing={farnsworthSpacing}
+        onFarnsworthChange={handleFarnsworthChange}
+        qsbAmount={qsbAmount}
+        onQsbChange={handleQsbChange}
+        levelSpacing={levelSpacing}
+        onLevelSpacingChange={handleLevelSpacingChange}
+        transitionDelay={transitionDelay}
+        onTransitionDelayChange={handleTransitionDelayChange}
+        progressiveSpeedMode={progressiveSpeedMode}
+        onProgressiveSpeedToggle={handleProgressiveSpeedToggle}
+
+        // Filter noise settings (shared)
+        radioNoiseEnabled={radioNoiseEnabled}
+        onRadioNoiseToggle={handleRadioNoiseToggle}
+        radioNoiseVolume={radioNoiseVolume}
+        onRadioNoiseVolumeChange={handleRadioNoiseVolumeChange}
+        radioNoiseResonance={radioNoiseResonance}
+        onRadioNoiseResonanceChange={handleRadioNoiseResonanceChange}
+        radioNoiseWarmth={radioNoiseWarmth}
+        onRadioNoiseWarmthChange={handleRadioNoiseWarmthChange}
+        radioNoiseDrift={radioNoiseDrift}
+        onRadioNoiseDriftChange={handleRadioNoiseDriftChange}
+        radioNoiseAtmospheric={radioNoiseAtmospheric}
+        onRadioNoiseAtmosphericChange={handleRadioNoiseAtmosphericChange}
+        radioNoiseCrackle={radioNoiseCrackle}
+        onRadioNoiseCrackleChange={handleRadioNoiseCrackleChange}
+        filterBandwidth={filterBandwidth}
+        onFilterBandwidthChange={handleFilterBandwidthChange}
+
+        // Trainer-specific settings
+        currentLevel={currentLevel}
+        onLevelChange={handleLevelChange}
+        groupSize={groupSize}
+        onGroupSizeChange={handleGroupSizeChange}
+        minGroupSize={minGroupSize}
+        onMinGroupSizeChange={handleMinGroupSizeChange}
+        maxRepeats={maxRepeats}
+        onMaxRepeatsChange={handleMaxRepeatsChange}
+        advanceThreshold={advanceThreshold}
+        onAdvanceThresholdChange={handleAdvanceThresholdChange}
+        consecutiveCorrect={consecutiveCorrect}
+        headCopyMode={headCopyMode}
+        onHeadCopyMode={handleHeadCopyMode}
+        infiniteDelayEnabled={infiniteDelayEnabled}
+        onInfiniteDelayToggle={handleInfiniteDelayToggle}
+        hideChars={hideChars}
+        onHideChars={handleHideChars}
+        availableChars={morseRef.current.getAvailableChars(currentLevel)}
+        presets={morseRef.current.getPresets()}
+        currentPreset={currentPreset}
+        onPresetChange={handlePresetChange}
+        onCustomizeClick={() => setIsModalOpen(true)}
+
+        // Runner-specific settings
+        qsoRate={qsoRate}
+        onQsoRateChange={handleQsoRateChange}
+        sendDelay={sendDelay}
+        onSendDelayChange={handleSendDelayChange}
+        showExchangePreview={showExchangePreview}
+        onShowExchangePreviewToggle={handleShowExchangePreviewToggle}
+        contestType={contestType}
+        onContestTypeChange={handleContestTypeChange}
+        contestTypes={CONTEST_TYPES}
+      />
+
       {activeModeTab === 'trainer' ? (
         <MorseUI
           isPlaying={isPlaying}
           onTogglePlay={handleTogglePlay}
           currentLevel={currentLevel}
-          onLevelChange={handleLevelChange}
           groupSize={groupSize}
-          onGroupSizeChange={handleGroupSizeChange}
-          // New min group size and max repeats
           minGroupSize={minGroupSize}
-          onMinGroupSizeChange={handleMinGroupSizeChange}
           maxRepeats={maxRepeats}
-          onMaxRepeatsChange={handleMaxRepeatsChange}
           frequency={frequency}
-          onFrequencyChange={handleFrequencyChange}
           wpm={wpm}
-          onWpmChange={handleWpmChange}
           availableChars={morseRef.current.getAvailableChars(currentLevel)}
           consecutiveCorrect={consecutiveCorrect}
           userInput={userInput}
@@ -774,50 +895,27 @@ const MorseTrainer = () => {
           onCharacterInput={handleCharacterInput}
           performanceData={performanceData}
           headCopyMode={headCopyMode}
-          onHeadCopyMode={handleHeadCopyMode}
           hideChars={hideChars}
-          onHideChars={handleHideChars}
           showAnswer={showAnswer}
           onShowAnswer={handleShowAnswer}
           currentGroup={headCopyMode && !showAnswer ? '' : currentGroup}
           qsbAmount={qsbAmount}
-          onQsbChange={handleQsbChange}
           presets={morseRef.current.getPresets()}
           currentPreset={currentPreset}
-          onPresetChange={handlePresetChange}
           advanceThreshold={advanceThreshold}
-          onAdvanceThresholdChange={handleAdvanceThresholdChange}
           farnsworthSpacing={farnsworthSpacing}
-          onFarnsworthChange={handleFarnsworthChange}
           progressiveSpeedMode={progressiveSpeedMode}
-          onProgressiveSpeedToggle={handleProgressiveSpeedToggle}
-          onCustomizeClick={() => setIsModalOpen(true)}
           customSequence={customSequence}
           levelSpacing={levelSpacing}
-          onLevelSpacingChange={handleLevelSpacingChange}
           transitionDelay={transitionDelay}
-          onTransitionDelayChange={handleTransitionDelayChange}
           // Filter noise parameters
           radioNoiseEnabled={radioNoiseEnabled}
-          onRadioNoiseToggle={handleRadioNoiseToggle}
-          radioNoiseVolume={radioNoiseVolume}
-          onRadioNoiseVolumeChange={handleRadioNoiseVolumeChange}
-          radioNoiseResonance={radioNoiseResonance}
-          onRadioNoiseResonanceChange={handleRadioNoiseResonanceChange}
-          radioNoiseWarmth={radioNoiseWarmth}
-          onRadioNoiseWarmthChange={handleRadioNoiseWarmthChange}
-          radioNoiseDrift={radioNoiseDrift}
-          onRadioNoiseDriftChange={handleRadioNoiseDriftChange}
-          radioNoiseAtmospheric={radioNoiseAtmospheric}
-          onRadioNoiseAtmosphericChange={handleRadioNoiseAtmosphericChange}
-          radioNoiseCrackle={radioNoiseCrackle}
-          onRadioNoiseCrackleChange={handleRadioNoiseCrackleChange}
           filterBandwidth={filterBandwidth}
-          onFilterBandwidthChange={handleFilterBandwidthChange}
           infiniteDelayEnabled={infiniteDelayEnabled}
-          onInfiniteDelayToggle={handleInfiniteDelayToggle}
           // Debug function - remove for production if desired
           onClearPerformanceData={clearPerformanceData}
+          // Remove handler props, they'll be called from the settings panel
+          isSettingsPanelVisible={isSettingsPanelVisible}
         />
       ) : (
         <div className="max-w-7xl mx-auto px-4 pb-16">
@@ -835,6 +933,10 @@ const MorseTrainer = () => {
             radioNoiseAtmospheric={radioNoiseAtmospheric}
             radioNoiseCrackle={radioNoiseCrackle}
             filterBandwidth={filterBandwidth}
+            qsoRate={qsoRate}
+            sendDelay={sendDelay}
+            showExchangePreview={showExchangePreview}
+            contestType={contestType}
           />
         </div>
       )}

@@ -242,6 +242,21 @@ export const MorseRunner = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  useEffect(() => {
+    if (contestType && contestType.id) {
+      console.log("Setting contest type from props:", contestType.name);
+      setContestType(contestType);
+
+      // If we're already running, update any necessary state
+      if (running) {
+        showNotification(`Contest type changed to ${contestType.name}`, 'blue');
+
+        // Generate a new QSO with the new contest type formatting
+        generateNewQso();
+      }
+    }
+  }, [contestType]);
+
   const generateNewQso = () => {
     // Keep generating callsigns until we get a valid one
     let newCallsign;
@@ -252,13 +267,16 @@ export const MorseRunner = ({
     // Generate exchange data for the contest type
     const newExchangeData = generateRandomData();
 
-    if (!contestType || !contestType.formats) {
-      console.error("Invalid contest type in generateNewQso:", contestType);
+    // Make sure we have a valid contest type, falling back to the prop if needed
+    const currentContestType = contestType || CONTEST_TYPES.SPRINT;
+
+    if (!currentContestType || !currentContestType.formats) {
+      console.error("Invalid contest type in generateNewQso:", currentContestType);
       return; // Exit early if contest type is invalid
     }
 
     // Choose a random format from the contest type
-    const formats = contestType.formats;
+    const formats = currentContestType.formats;
     // Remove formats that end with K or TU
     const filteredFormats = formats.filter(f => !f.endsWith(' K'));
     const randomFormat = filteredFormats[Math.floor(Math.random() * filteredFormats.length)];
@@ -734,39 +752,6 @@ export const MorseRunner = ({
       {/* Main Contest Area */}
       <AnimatedSection title="Contest Operation" icon={Radio} defaultOpen={true}>
         <div className="space-y-5">
-          {/* Contest Type Selection - Redesigned */}
-          <div className="bg-gradient-to-r from-gray-800/60 to-gray-700/60 rounded-xl overflow-hidden shadow-lg">
-            <div className="border-b border-gray-700/50 px-4 py-3 bg-gray-800/50 flex justify-between items-center">
-              <div className="text-sm font-medium text-gray-200 flex items-center">
-                <Flag size={16} className="mr-2 text-blue-400" />
-                Contest Type
-              </div>
-              <div className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-900/30 text-blue-400 border border-blue-500/30">
-                {contestType?.id || 'sprint'}
-              </div>
-            </div>
-
-            <div className="p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {Object.values(CONTEST_TYPES).map((type) => (
-                <InteractiveButton
-                  key={type.id}
-                  onClick={() => handleContestTypeChange(type.id)}
-                  className={`px-3 py-3 rounded-lg text-center text-sm font-medium shadow transition-all duration-200 ${
-                    contestType && contestType.id === type.id
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white ring-2 ring-blue-500/50 ring-offset-1 ring-offset-gray-800'
-                      : 'bg-gray-700/80 hover:bg-gray-600/80 text-gray-300 hover:text-white'
-                  }`}
-                >
-                  {type.name}
-                </InteractiveButton>
-              ))}
-            </div>
-
-            <div className="px-4 py-2 text-xs text-gray-400 bg-gray-800/30 border-t border-gray-700/30">
-              {contestType?.description || ''}
-            </div>
-          </div>
-
           {/* Runner Controls - Fancy redesign */}
           <div className="bg-gradient-to-b from-gray-800/90 to-gray-700/70 rounded-xl shadow-lg relative overflow-hidden border border-gray-700/50">
             <div className="absolute inset-0 bg-circuit-pattern opacity-5"></div>
