@@ -29,10 +29,10 @@ export const MorseRunnerController = ({
   radioNoiseAtmospheric,
   radioNoiseCrackle,
   filterBandwidth,
-  // New runner-specific props
-  qsoRate = 3,
-  sendDelay = 0.5,
-  showExchangePreview = true,
+  // Runner-specific props
+  qsoRate,
+  sendDelay,
+  showExchangePreview,
   contestType
 }) => {
   const [runnerMode, setRunnerMode] = useState('normal'); // 'normal', 'pileup', 'practice'
