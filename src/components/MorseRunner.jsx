@@ -72,12 +72,12 @@ export const MorseRunner = ({
   qsoRate = 3,
   sendDelay = 0.5,
   showExchangePreview = true,
-  contestType = CONTEST_TYPES.SPRINT
+  contestType = CONTEST_TYPES.SPRINT,
+  // Add onWpmChange callback to sync WPM changes back to parent component
+  onWpmChange
 }) => {
   const [running, setRunning] = useState(false);
-  // Instead of creating new state, use the prop directly and maintain internal state
-  // only for UI-specific concerns
-  const [speed, setSpeed] = useState(wpm);
+  // No more internal speed state - we use the wpm prop directly
   const [currentCallsign, setCurrentCallsign] = useState('');
   const [currentReport, setCurrentReport] = useState('');
   const [qsos, setQsos] = useState([]);
@@ -157,11 +157,6 @@ export const MorseRunner = ({
       cleanupResources();
     };
   }, [cleanupResources]);
-
-  // Effect to update speed when wpm prop changes
-  useEffect(() => {
-    setSpeed(wpm);
-  }, [wpm]);
 
   // Initialize with a random callsign and report
   useEffect(() => {
@@ -355,7 +350,7 @@ export const MorseRunner = ({
         morseAudio.start();
 
         // Now play the sequence
-        morseAudio.playSequence(callsignToPlay, speed, farnsworthSpacing);
+        morseAudio.playSequence(callsignToPlay, wpm, farnsworthSpacing);
 
         // Start filter noise if enabled
         if (filterNoiseEnabled) {
@@ -374,7 +369,7 @@ export const MorseRunner = ({
             console.log("Retry starting audio...");
             morseAudio.initialize();
             morseAudio.start();
-            morseAudio.playSequence(callsignToPlay, speed, farnsworthSpacing);
+            morseAudio.playSequence(callsignToPlay, wpm, farnsworthSpacing);
 
             if (filterNoiseEnabled) {
               filterNoise.initialize();
@@ -424,8 +419,8 @@ export const MorseRunner = ({
           morseAudio.start();
 
           // Play the sequence with provided settings
-          console.log("Playing sequence:", sequenceToPlay, speed, farnsworthSpacing);
-          morseAudio.playSequence(sequenceToPlay, speed, farnsworthSpacing);
+          console.log("Playing sequence:", sequenceToPlay, wpm, farnsworthSpacing);
+          morseAudio.playSequence(sequenceToPlay, wpm, farnsworthSpacing);
 
           // Start filter noise if enabled
           if (filterNoiseEnabled) {
@@ -714,9 +709,15 @@ export const MorseRunner = ({
     }
   };
 
+  // Updated to use the parent component's onWpmChange callback
   const handleSpeedChange = (delta) => {
-    const newSpeed = Math.max(5, Math.min(50, speed + delta));
-    setSpeed(newSpeed);
+    // Calculate the new speed value
+    const newSpeed = Math.max(5, Math.min(50, wpm + delta));
+
+    // Call the parent component's callback with the new WPM value
+    if (onWpmChange) {
+      onWpmChange(delta);
+    }
   };
 
   return (
@@ -767,7 +768,7 @@ export const MorseRunner = ({
                       </div>
                       <div>
                         <div className="text-xs text-gray-400">WPM</div>
-                        <div className="text-lg font-mono text-white">{speed}</div>
+                        <div className="text-lg font-mono text-white">{wpm}</div>
                       </div>
                     </div>
 
@@ -775,12 +776,12 @@ export const MorseRunner = ({
                       <InteractiveButton
                         onClick={() => handleSpeedChange(-2)}
                         className="w-7 h-7 rounded bg-gray-700 hover:bg-gray-600 text-sm"
-                        disabled={speed <= 5}
+                        disabled={wpm <= 5}
                       >-</InteractiveButton>
                       <InteractiveButton
                         onClick={() => handleSpeedChange(2)}
                         className="w-7 h-7 rounded bg-gray-700 hover:bg-gray-600 text-sm ml-1"
-                        disabled={speed >= 50}
+                        disabled={wpm >= 50}
                       >+</InteractiveButton>
                     </div>
                   </div>
@@ -800,7 +801,7 @@ export const MorseRunner = ({
                   <div className="flex items-center justify-center gap-2">
                     {running ? (
                       <>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="6" y="4" width="4" height="16"></rect>
                           <rect x="14" y="4" width="4" height="16"></rect>
                         </svg>

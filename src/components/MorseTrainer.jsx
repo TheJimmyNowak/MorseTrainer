@@ -937,6 +937,7 @@ const MorseTrainer = () => {
             sendDelay={sendDelay}
             showExchangePreview={showExchangePreview}
             contestType={contestType}
+            onWpmChange={handleWpmChange}
           />
         </div>
       )}

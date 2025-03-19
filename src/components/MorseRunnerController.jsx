@@ -33,7 +33,9 @@ export const MorseRunnerController = ({
   qsoRate,
   sendDelay,
   showExchangePreview,
-  contestType
+  contestType,
+  // Add the onWpmChange prop to receive speed changes from parent
+  onWpmChange
 }) => {
   const [runnerMode, setRunnerMode] = useState('normal'); // 'normal', 'pileup', 'practice'
   const [isRunnerActive, setIsRunnerActive] = useState(false);
@@ -83,6 +85,14 @@ export const MorseRunnerController = ({
   const handleRunningChange = (isRunning) => {
     console.log("Runner active state changed:", isRunning);
     setIsRunnerActive(isRunning);
+  };
+
+  // Handle WPM changes from the runner component
+  const handleRunnerWpmChange = (delta) => {
+    // Forward the WPM change to the parent component
+    if (onWpmChange) {
+      onWpmChange(delta);
+    }
   };
 
   return (
@@ -225,6 +235,7 @@ export const MorseRunnerController = ({
           sendDelay={sendDelay}
           showExchangePreview={showExchangePreview}
           contestType={contestType}
+          onWpmChange={handleRunnerWpmChange} // Pass the callback to handle WPM changes
         />
       </div>
 

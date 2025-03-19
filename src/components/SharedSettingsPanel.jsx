@@ -11,12 +11,12 @@ import { RepeatControls } from './RepeatControls';
 import { AvailableChars } from './AvailableChars';
 import { HelpTooltip } from './HelpTooltip';
 
-export const SharedSettingsPanel = ({ 
-  isVisible, 
+export const SharedSettingsPanel = ({
+  isVisible,
   onVisibilityChange,
   // Active mode
   activeModeTab,
-  
+
   // Audio settings (shared between modes)
   frequency,
   onFrequencyChange,
@@ -32,7 +32,7 @@ export const SharedSettingsPanel = ({
   onTransitionDelayChange,
   progressiveSpeedMode,
   onProgressiveSpeedToggle,
-  
+
   // Filter noise settings (shared between modes)
   radioNoiseEnabled,
   onRadioNoiseToggle,
@@ -50,7 +50,7 @@ export const SharedSettingsPanel = ({
   onRadioNoiseCrackleChange,
   filterBandwidth,
   onFilterBandwidthChange,
-  
+
   // Trainer-specific settings
   currentLevel,
   onLevelChange,
@@ -74,7 +74,7 @@ export const SharedSettingsPanel = ({
   currentPreset,
   onPresetChange,
   onCustomizeClick,
-  
+
   // Runner-specific settings
   runnerSpeed,
   onRunnerSpeedChange,
@@ -113,7 +113,7 @@ export const SharedSettingsPanel = ({
       <div
         ref={panelRef}
         onClick={handlePanelClick}
-        className={`fixed inset-0 lg:left-auto lg:w-[400px] z-50 
+        className={`fixed inset-0 lg:left-auto lg:w-[400px] z-50
           bg-gradient-to-l from-gray-800/95 to-gray-900/95 backdrop-blur-lg shadow-2xl
           transition-transform duration-300 ease-in-out overflow-y-auto
           border-l border-gray-700/50
@@ -370,7 +370,7 @@ export const SharedSettingsPanel = ({
 
       {/* Backdrop overlay */}
       <div
-        className={`fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 z-40
+        className={`fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 z-100
           ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={() => onVisibilityChange(false)}
       />
