@@ -22,7 +22,7 @@ export const AlphaBanner = () => (
           <span className="hidden sm:inline">GitHub</span>
         </a>
         <a
-          href="https://discord.gg/bt2DqaJstv"
+          href="https://discord.gg/S5FHkWeDCs"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:opacity-80 transition-opacity flex items-center gap-1"
