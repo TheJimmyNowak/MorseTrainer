@@ -9,14 +9,18 @@ export class MorseSettings {
       farnsworthSpacing: 0,
       frequency: 600,
       groupSize: 3,
-      minGroupSize: 1,         // New setting for minimum group size
-      maxRepeats: -1,          // New setting for max repeats (-1 means infinite)
+      minGroupSize: 1,         // Minimum group size
+      maxRepeats: -1,          // Max repeats (-1 means infinite)
       advanceThreshold: 3,
       headCopyMode: false,
       hideChars: false,
       qsbAmount: 0,
-      levelSpacing: 1000,    // Time between repeated sequences
-      transitionDelay: 500,  // Time before starting new sequence after changes
+      levelSpacing: 1000,      // Time between repeated sequences
+      transitionDelay: 500,    // Time before starting new sequence after changes
+      
+      // New settings for level locking
+      minLevelThreshold: 1,    // Minimum level that training can decrease to
+      isLevelLocked: false,    // Whether level is locked at current value
       
       // Filter noise default settings
       radioNoiseEnabled: false,
@@ -26,7 +30,7 @@ export class MorseSettings {
       radioNoiseDrift: 0.5,
       radioNoiseAtmospheric: 0.5,
       radioNoiseCrackle: 0.05,
-      filterBandwidth: 550     // New setting for filter bandwidth (default: 550Hz)
+      filterBandwidth: 550     // Filter bandwidth (default: 550Hz)
     };
   }
 

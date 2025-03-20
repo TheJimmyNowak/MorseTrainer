@@ -10,6 +10,7 @@ import { AudioControls } from './AudioControls';
 import { RepeatControls } from './RepeatControls';
 import { AvailableChars } from './AvailableChars';
 import { HelpTooltip } from './HelpTooltip';
+import { LevelLockControls } from './LevelLockControls';
 
 export const SharedSettingsPanel = ({
   isVisible,
@@ -74,6 +75,12 @@ export const SharedSettingsPanel = ({
   currentPreset,
   onPresetChange,
   onCustomizeClick,
+  
+  // Level lock settings
+  minLevelThreshold,
+  onMinLevelThresholdChange,
+  isLevelLocked,
+  onLevelLockToggle,
 
   // Runner-specific settings
   runnerSpeed,
@@ -202,64 +209,76 @@ export const SharedSettingsPanel = ({
 
           {/* Trainer-specific settings */}
           {activeModeTab === 'trainer' && (
-            <AnimatedSection title="Training Settings" icon={Headphones} defaultOpen={true}>
-              <div className="space-y-6">
-                <PresetDropdown
-                  presets={presets}
-                  currentPreset={currentPreset}
-                  onPresetChange={onPresetChange}
-                  onCustomizeClick={onCustomizeClick}
-                />
-                <div className="grid grid-cols-1 gap-4">
-                  <ModeToggle
-                    label="Head Copy Mode"
-                    description="Hide the text while practicing"
-                    isActive={headCopyMode}
-                    onToggle={onHeadCopyMode}
-                    tooltipText="Trains your ability to copy Morse in your head without visual aids. In this mode, you need to listen to the entire sequence before typing or revealing the answer."
+            <>
+              <AnimatedSection title="Training Settings" icon={Headphones} defaultOpen={true}>
+                <div className="space-y-6">
+                  <PresetDropdown
+                    presets={presets}
+                    currentPreset={currentPreset}
+                    onPresetChange={onPresetChange}
+                    onCustomizeClick={onCustomizeClick}
                   />
-                  <ModeToggle
-                    label="Progressive Speed"
-                    description="Speed increases automatically with level"
-                    isActive={progressiveSpeedMode}
-                    onToggle={onProgressiveSpeedToggle}
-                    tooltipText="Automatically increases the character speed (WPM) as you advance in levels. This helps you naturally progress to faster speeds as you become more proficient."
-                  />
-                  <ModeToggle
-                    label="Infinite Delay After Max Repeats"
-                    description="Give unlimited time to answer after max repeats"
-                    isActive={infiniteDelayEnabled}
-                    onToggle={onInfiniteDelayToggle}
-                    tooltipText="When enabled, the sequence will pause indefinitely after reaching maximum repeats, giving you unlimited time to provide an answer. When disabled, incorrect answer is marked automatically after max repeats."
-                  />
-                </div>
-                <ControlPanel
-                  currentLevel={currentLevel}
-                  onLevelChange={onLevelChange}
-                  groupSize={groupSize}
-                  onGroupSizeChange={onGroupSizeChange}
-                  minGroupSize={minGroupSize}
-                  onMinGroupSizeChange={onMinGroupSizeChange}
-                  maxLevel={presets?.[0]?.sequence?.length || 40}
-                  advanceThreshold={advanceThreshold}
-                  onAdvanceThresholdChange={onAdvanceThresholdChange}
-                  consecutiveCorrect={consecutiveCorrect}
-                />
-
-                <RepeatControls
-                  maxRepeats={maxRepeats}
-                  onMaxRepeatsChange={onMaxRepeatsChange}
-                />
-
-                {availableChars && (
-                  <AvailableChars
-                    availableChars={availableChars}
-                    consecutiveCorrect={consecutiveCorrect}
+                  <div className="grid grid-cols-1 gap-4">
+                    <ModeToggle
+                      label="Head Copy Mode"
+                      description="Hide the text while practicing"
+                      isActive={headCopyMode}
+                      onToggle={onHeadCopyMode}
+                      tooltipText="Trains your ability to copy Morse in your head without visual aids. In this mode, you need to listen to the entire sequence before typing or revealing the answer."
+                    />
+                    <ModeToggle
+                      label="Progressive Speed"
+                      description="Speed increases automatically with level"
+                      isActive={progressiveSpeedMode}
+                      onToggle={onProgressiveSpeedToggle}
+                      tooltipText="Automatically increases the character speed (WPM) as you advance in levels. This helps you naturally progress to faster speeds as you become more proficient."
+                    />
+                    <ModeToggle
+                      label="Infinite Delay After Max Repeats"
+                      description="Give unlimited time to answer after max repeats"
+                      isActive={infiniteDelayEnabled}
+                      onToggle={onInfiniteDelayToggle}
+                      tooltipText="When enabled, the sequence will pause indefinitely after reaching maximum repeats, giving you unlimited time to provide an answer. When disabled, incorrect answer is marked automatically after max repeats."
+                    />
+                  </div>
+                  <ControlPanel
+                    currentLevel={currentLevel}
+                    onLevelChange={onLevelChange}
+                    groupSize={groupSize}
+                    onGroupSizeChange={onGroupSizeChange}
+                    minGroupSize={minGroupSize}
+                    onMinGroupSizeChange={onMinGroupSizeChange}
+                    maxLevel={presets?.[0]?.sequence?.length || 40}
                     advanceThreshold={advanceThreshold}
+                    onAdvanceThresholdChange={onAdvanceThresholdChange}
+                    consecutiveCorrect={consecutiveCorrect}
                   />
-                )}
-              </div>
-            </AnimatedSection>
+
+                  {/* Add the new Level Lock Controls section */}
+                  <LevelLockControls
+                    minLevelThreshold={minLevelThreshold}
+                    onMinLevelThresholdChange={onMinLevelThresholdChange}
+                    isLevelLocked={isLevelLocked}
+                    onLevelLockToggle={onLevelLockToggle}
+                    currentLevel={currentLevel}
+                    maxLevel={presets?.[0]?.sequence?.length || 40}
+                  />
+
+                  <RepeatControls
+                    maxRepeats={maxRepeats}
+                    onMaxRepeatsChange={onMaxRepeatsChange}
+                  />
+
+                  {availableChars && (
+                    <AvailableChars
+                      availableChars={availableChars}
+                      consecutiveCorrect={consecutiveCorrect}
+                      advanceThreshold={advanceThreshold}
+                    />
+                  )}
+                </div>
+              </AnimatedSection>
+            </>
           )}
 
           {/* Runner-specific settings */}

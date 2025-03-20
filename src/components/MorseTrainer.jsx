@@ -29,8 +29,8 @@ const MorseTrainer = () => {
       wpm: settings.wpm,
       frequency: settings.frequency,
       groupSize: settings.groupSize,
-      minGroupSize: settings.minGroupSize || 1, // New - minimum group size
-      maxRepeats: settings.maxRepeats !== undefined ? settings.maxRepeats : -1, // New - max repeats
+      minGroupSize: settings.minGroupSize || 1, // Minimum group size
+      maxRepeats: settings.maxRepeats !== undefined ? settings.maxRepeats : -1, // Max repeats
       advanceThreshold: settings.advanceThreshold,
       headCopyMode: settings.headCopyMode,
       hideChars: settings.hideChars,
@@ -50,6 +50,9 @@ const MorseTrainer = () => {
       farnsworthSpacing: settings.farnsworthSpacing || 0,
       filterBandwidth: settings.filterBandwidth || 550,
       infiniteDelayEnabled: settings.infiniteDelayEnabled || false,
+      // New settings for level threshold and lock
+      minLevelThreshold: settings.minLevelThreshold || 1,
+      isLevelLocked: settings.isLevelLocked || false,
       // Runner mode settings
       qsoRate: settings.qsoRate || 3,
       sendDelay: settings.sendDelay || 0.5,
@@ -107,6 +110,10 @@ const MorseTrainer = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [notification, setNotification] = useState('');
   const [isPaused, setIsPaused] = useState(false);
+
+  // New level lock settings
+  const [minLevelThreshold, setMinLevelThreshold] = useState(savedSettings.minLevelThreshold || 1);
+  const [isLevelLocked, setIsLevelLocked] = useState(savedSettings.isLevelLocked || false);
 
   // Runner-specific state
   const [qsoRate, setQsoRate] = useState(savedSettings.qsoRate || 3);
@@ -332,6 +339,9 @@ const MorseTrainer = () => {
       radioNoiseCrackle,
       filterBandwidth,
       infiniteDelayEnabled,
+      // Include new level lock settings
+      minLevelThreshold,
+      isLevelLocked,
       // Runner-specific settings
       qsoRate,
       sendDelay,
@@ -347,6 +357,8 @@ const MorseTrainer = () => {
     // Include filter noise settings
     radioNoiseEnabled, radioNoiseVolume, radioNoiseResonance, radioNoiseWarmth,
     radioNoiseDrift, radioNoiseAtmospheric, radioNoiseCrackle, filterBandwidth,
+    // Include new level lock settings
+    minLevelThreshold, isLevelLocked,
     // Runner settings
     qsoRate, sendDelay, showExchangePreview, contestType
   ]);
@@ -359,11 +371,37 @@ const MorseTrainer = () => {
     setProgressiveSpeedMode(prev => !prev);
   }, []);
 
+  // Handler for minimum level threshold changes
+  const handleMinLevelThresholdChange = (delta) => {
+    const newThreshold = Math.max(1, Math.min(currentLevel, minLevelThreshold + delta));
+    setMinLevelThreshold(newThreshold);
+  };
+
+  // Handler for level lock toggle
+  const handleLevelLockToggle = () => {
+    setIsLevelLocked(!isLevelLocked);
+    showNotification(
+      !isLevelLocked
+        ? `Level locked at ${currentLevel}`
+        : 'Level unlocked',
+      !isLevelLocked ? 'yellow' : 'blue',
+      1500
+    );
+  };
+
   const updateLevelAndSpeed = useCallback((newLevel, isAutomatic = false) => {
-    setCurrentLevel(newLevel);
+    // If level is locked and this is an automatic level change, don't update
+    if (isLevelLocked && isAutomatic) {
+      showNotification('Level locked - not advancing', 'yellow', transitionDelay);
+      return;
+    }
+
+    // Ensure the level doesn't drop below the minimum threshold
+    const adjustedLevel = Math.max(minLevelThreshold, newLevel);
+    setCurrentLevel(adjustedLevel);
 
     if (progressiveSpeedMode && isAutomatic) {
-      const speedDelta = newLevel > currentLevel ? 1 : -1;
+      const speedDelta = adjustedLevel > currentLevel ? 1 : -1;
       const newWpm = Math.max(5, Math.min(50, wpm + speedDelta));
       setWpm(newWpm);
 
@@ -371,21 +409,22 @@ const MorseTrainer = () => {
         morseAudio.stop();
         if (radioNoiseEnabled) filterNoise.stop();
         showNotification(
-          `Level ${newLevel}: Speed ${speedDelta > 0 ? 'increased' : 'decreased'} to ${newWpm} WPM`,
+          `Level ${adjustedLevel}: Speed ${speedDelta > 0 ? 'increased' : 'decreased'} to ${newWpm} WPM`,
           speedDelta > 0 ? 'green' : 'yellow',
           transitionDelay
         );
-        startNewGroup(newLevel, transitionDelay);
+        startNewGroup(adjustedLevel, transitionDelay);
       }
     } else {
       if (isPlaying) {
         morseAudio.stop();
         if (radioNoiseEnabled) filterNoise.stop();
-        showNotification(`Level changed to ${newLevel}`, 'yellow', transitionDelay);
-        startNewGroup(newLevel, transitionDelay);
+        showNotification(`Level changed to ${adjustedLevel}`, 'yellow', transitionDelay);
+        startNewGroup(adjustedLevel, transitionDelay);
       }
     }
-  }, [progressiveSpeedMode, wpm, currentLevel, isPlaying, startNewGroup, showNotification, transitionDelay, radioNoiseEnabled]);
+  }, [progressiveSpeedMode, wpm, currentLevel, isPlaying, startNewGroup, showNotification,
+      transitionDelay, radioNoiseEnabled, minLevelThreshold, isLevelLocked]);
 
   // Filter bandwidth handler
   const handleFilterBandwidthChange = (delta) => {
@@ -395,7 +434,18 @@ const MorseTrainer = () => {
   };
 
   const handleLevelChange = (delta) => {
-    const newLevel = Math.max(1, Math.min(morseRef.current.getMaxLevel(), currentLevel + delta));
+    // If level is locked, don't allow any changes
+    if (isLevelLocked) {
+      showNotification('Level is locked', 'yellow', 1500);
+      return;
+    }
+
+    // Calculate the new level, ensuring it doesn't go below minLevelThreshold
+    const newLevel = Math.max(
+      minLevelThreshold,
+      Math.min(morseRef.current.getMaxLevel(), currentLevel + delta)
+    );
+
     if (newLevel !== currentLevel) {
       updateLevelAndSpeed(newLevel, false);
     }
@@ -441,9 +491,11 @@ const MorseTrainer = () => {
       if (radioNoiseEnabled) filterNoise.stop();
       setIsPlaying(false);
 
-      if (currentLevel > 1) {
+      // Only decrease level if not level-locked and above minimum threshold
+      if (currentLevel > minLevelThreshold && !isLevelLocked) {
         updateLevelAndSpeed(currentLevel - 1, true);
       } else {
+        // If at min threshold or level-locked, restart at current level
         startNewGroup(currentLevel, transitionDelay);
       }
     };
@@ -475,7 +527,8 @@ const MorseTrainer = () => {
         const newConsecutiveCorrect = consecutiveCorrect + 1;
         setConsecutiveCorrect(newConsecutiveCorrect);
 
-        if (newConsecutiveCorrect >= advanceThreshold && currentLevel < morseRef.current.getMaxLevel()) {
+        // Only advance level if not level-locked
+        if (newConsecutiveCorrect >= advanceThreshold && currentLevel < morseRef.current.getMaxLevel() && !isLevelLocked) {
           updateLevelAndSpeed(currentLevel + 1, true);
           setConsecutiveCorrect(0);
           if (progressiveSpeedMode) {
@@ -485,6 +538,11 @@ const MorseTrainer = () => {
             showNotification(`Level up! Now at level ${currentLevel + 1}`, 'blue', transitionDelay);
           }
         } else {
+          // If level is locked, give a notification when threshold is reached
+          if (newConsecutiveCorrect >= advanceThreshold && isLevelLocked) {
+            showNotification(`Threshold reached, but level is locked at ${currentLevel}`, 'yellow', transitionDelay);
+            setConsecutiveCorrect(0);
+          }
           startNewGroup(currentLevel, transitionDelay);
         }
       } else {
@@ -494,7 +552,8 @@ const MorseTrainer = () => {
   }, [
     isPlaying, userInput, currentGroup, consecutiveCorrect, advanceThreshold,
     currentLevel, notification, updateLevelAndSpeed, currentPreset, progressiveSpeedMode,
-    wpm, showNotification, startNewGroup, updatePerformanceData, transitionDelay, radioNoiseEnabled
+    wpm, showNotification, startNewGroup, updatePerformanceData, transitionDelay,
+    radioNoiseEnabled, minLevelThreshold, isLevelLocked
   ]);
 
   const handleCharacterRemoved = () => {
@@ -685,6 +744,9 @@ const MorseTrainer = () => {
     setCurrentPreset(morseRef.current.getCurrentPreset());
     setCurrentLevel(1);
     setConsecutiveCorrect(0);
+    // Reset minimum level threshold when changing presets
+    setMinLevelThreshold(1);
+    setIsLevelLocked(false);
     showNotification(`Switched to ${morseRef.current.getCurrentPreset().name}`, 'blue', transitionDelay);
     if (isPlaying) {
       morseAudio.stop();
@@ -862,6 +924,12 @@ const MorseTrainer = () => {
         onPresetChange={handlePresetChange}
         onCustomizeClick={() => setIsModalOpen(true)}
 
+        // Level lock settings (new)
+        minLevelThreshold={minLevelThreshold}
+        onMinLevelThresholdChange={handleMinLevelThresholdChange}
+        isLevelLocked={isLevelLocked}
+        onLevelLockToggle={handleLevelLockToggle}
+
         // Runner-specific settings
         qsoRate={qsoRate}
         onQsoRateChange={handleQsoRateChange}
@@ -914,6 +982,9 @@ const MorseTrainer = () => {
           infiniteDelayEnabled={infiniteDelayEnabled}
           // Debug function - remove for production if desired
           onClearPerformanceData={clearPerformanceData}
+          // Level lock indicators (can be displayed in the UI)
+          minLevelThreshold={minLevelThreshold}
+          isLevelLocked={isLevelLocked}
           // Remove handler props, they'll be called from the settings panel
           isSettingsPanelVisible={isSettingsPanelVisible}
         />
